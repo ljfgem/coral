@@ -11,12 +11,14 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.util.ChainedSqlOperatorTable;
+import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
@@ -28,7 +30,7 @@ import com.linkedin.coral.hive.hive2rel.functions.HiveFunctionResolver;
 import com.linkedin.coral.hive.hive2rel.functions.StaticHiveFunctionRegistry;
 import com.linkedin.coral.hive.hive2rel.parsetree.ParseTreeBuilder;
 
-import static com.linkedin.coral.hive.hive2rel.HiveSqlConformance.HIVE_SQL;
+import static com.linkedin.coral.hive.hive2rel.HiveSqlConformance.HIVE_SQL_CONFORMANCE;
 
 
 /**
@@ -51,7 +53,7 @@ public class HiveToRelConverter extends ToRelConverter {
   private final
   // The validator must be reused
   SqlValidator sqlValidator = new HiveSqlValidator(getOperatorTable(), getCalciteCatalogReader(),
-      ((JavaTypeFactory) getRelBuilder().getTypeFactory()), HIVE_SQL);
+      ((JavaTypeFactory) getRelBuilder().getTypeFactory()), getSqlConformance());
 
   public HiveToRelConverter(HiveMetastoreClient hiveMetastoreClient) {
     super(hiveMetastoreClient);
@@ -81,12 +83,21 @@ public class HiveToRelConverter extends ToRelConverter {
   @Override
   protected SqlToRelConverter getSqlToRelConverter() {
     if (sqlToRelConverter == null) {
-      sqlToRelConverter =
-          new HiveSqlToRelConverter(new HiveViewExpander(this), getSqlValidator(), getCalciteCatalogReader(),
-              RelOptCluster.create(new VolcanoPlanner(), getRelBuilder().getRexBuilder()), getConvertletTable(),
-              SqlToRelConverter.configBuilder().withRelBuilderFactory(HiveRelBuilder.LOGICAL_BUILDER).build());
+      sqlToRelConverter = new HiveSqlToRelConverter(getViewExpander(), getSqlValidator(), getCalciteCatalogReader(),
+          RelOptCluster.create(new VolcanoPlanner(), getRelBuilder().getRexBuilder()), getConvertletTable(),
+          SqlToRelConverter.configBuilder().withRelBuilderFactory(HiveRelBuilder.LOGICAL_BUILDER).build());
     }
     return sqlToRelConverter;
+  }
+
+  @Override
+  protected SqlConformance getSqlConformance() {
+    return HIVE_SQL_CONFORMANCE;
+  }
+
+  @Override
+  protected RelOptTable.ViewExpander getViewExpander() {
+    return new HiveViewExpander(this);
   }
 
   @Override

@@ -11,12 +11,14 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.util.ChainedSqlOperatorTable;
+import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
@@ -34,7 +36,7 @@ import com.linkedin.coral.trino.trino2rel.parsetree.ParseTreeBuilder;
 import com.linkedin.coral.trino.trino2rel.parsetree.ParserVisitorContext;
 import com.linkedin.coral.trino.trino2rel.parsetree.TrinoParserDriver;
 
-import static com.linkedin.coral.trino.trino2rel.TrinoSqlConformance.*;
+import static com.linkedin.coral.trino.trino2rel.TrinoSqlConformance.TRINO_SQL_CONFORMANCE;
 
 
 /*
@@ -52,7 +54,7 @@ public class TrinoToRelConverter extends ToRelConverter {
   private final
   // The validator must be reused
   SqlValidator sqlValidator = new HiveSqlValidator(getOperatorTable(), getCalciteCatalogReader(),
-      ((JavaTypeFactory) getRelBuilder().getTypeFactory()), TRINO_SQL);
+      ((JavaTypeFactory) getRelBuilder().getTypeFactory()), getSqlConformance());
 
   public TrinoToRelConverter(HiveMetastoreClient hiveMetastoreClient) {
     super(hiveMetastoreClient);
@@ -79,9 +81,19 @@ public class TrinoToRelConverter extends ToRelConverter {
 
   @Override
   protected SqlToRelConverter getSqlToRelConverter() {
-    return new TrinoSqlToRelConverter(new TrinoViewExpander(this), getSqlValidator(), getCalciteCatalogReader(),
+    return new TrinoSqlToRelConverter(getViewExpander(), getSqlValidator(), getCalciteCatalogReader(),
         RelOptCluster.create(new VolcanoPlanner(), getRelBuilder().getRexBuilder()), getConvertletTable(),
         SqlToRelConverter.configBuilder().withRelBuilderFactory(HiveRelBuilder.LOGICAL_BUILDER).build());
+  }
+
+  @Override
+  protected SqlConformance getSqlConformance() {
+    return TRINO_SQL_CONFORMANCE;
+  }
+
+  @Override
+  protected RelOptTable.ViewExpander getViewExpander() {
+    return new TrinoViewExpander(this);
   }
 
   @Override

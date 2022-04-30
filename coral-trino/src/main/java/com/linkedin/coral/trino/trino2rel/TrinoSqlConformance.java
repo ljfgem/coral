@@ -12,7 +12,7 @@ import org.apache.calcite.sql.validate.SqlDelegatingConformance;
 
 public class TrinoSqlConformance extends SqlDelegatingConformance {
 
-  public static final SqlConformance TRINO_SQL = new TrinoSqlConformance();
+  public static final SqlConformance TRINO_SQL_CONFORMANCE = new TrinoSqlConformance();
 
   private TrinoSqlConformance() {
     super(SqlConformanceEnum.PRAGMATIC_2003);

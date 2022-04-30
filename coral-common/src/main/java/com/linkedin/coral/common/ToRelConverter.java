@@ -18,6 +18,7 @@ import org.apache.calcite.config.CalciteConnectionConfigImpl;
 import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.jdbc.Driver;
+import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.RelNode;
@@ -27,6 +28,7 @@ import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlNameMatchers;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
@@ -62,6 +64,10 @@ public abstract class ToRelConverter {
   protected abstract SqlOperatorTable getOperatorTable();
 
   protected abstract SqlToRelConverter getSqlToRelConverter();
+
+  protected abstract SqlConformance getSqlConformance();
+
+  protected abstract RelOptTable.ViewExpander getViewExpander();
 
   protected abstract SqlNode toSqlNode(String sql, org.apache.hadoop.hive.metastore.api.Table hiveView);
 
