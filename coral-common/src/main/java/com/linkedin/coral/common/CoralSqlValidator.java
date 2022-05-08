@@ -3,14 +3,13 @@
  * Licensed under the BSD-2 Clause license.
  * See LICENSE in the project root for license information.
  */
-package com.linkedin.coral.hive.hive2rel;
+package com.linkedin.coral.common;
 
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlBasicCall;
-import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlUtil;
@@ -22,24 +21,12 @@ import org.apache.calcite.sql.validate.SqlValidatorScope;
 import com.linkedin.coral.common.functions.FunctionFieldReferenceOperator;
 
 
-public class HiveSqlValidator extends SqlValidatorImpl {
+public class CoralSqlValidator extends SqlValidatorImpl {
 
-  public HiveSqlValidator(SqlOperatorTable opTab, CalciteCatalogReader catalogReader, JavaTypeFactory typeFactory,
+  public CoralSqlValidator(SqlOperatorTable opTab, CalciteCatalogReader catalogReader, JavaTypeFactory typeFactory,
       SqlConformance conformance) {
     super(opTab, catalogReader, typeFactory, conformance);
     setDefaultNullCollation(NullCollation.LOW);
-  }
-
-  @Override
-  protected RelDataType getLogicalSourceRowType(RelDataType sourceRowType, SqlInsert insert) {
-    final RelDataType superType = super.getLogicalSourceRowType(sourceRowType, insert);
-    return ((JavaTypeFactory) typeFactory).toSql(superType);
-  }
-
-  @Override
-  protected RelDataType getLogicalTargetRowType(RelDataType targetRowType, SqlInsert insert) {
-    final RelDataType superType = super.getLogicalTargetRowType(targetRowType, insert);
-    return ((JavaTypeFactory) typeFactory).toSql(superType);
   }
 
   @Override
