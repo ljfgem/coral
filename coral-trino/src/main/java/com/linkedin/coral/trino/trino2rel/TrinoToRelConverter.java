@@ -22,10 +22,10 @@ import org.apache.calcite.sql2rel.SqlRexConvertletTable;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.hadoop.hive.metastore.api.Table;
 
+import com.linkedin.coral.common.CoralConvertletTable;
 import com.linkedin.coral.common.HiveMetastoreClient;
 import com.linkedin.coral.common.ToRelConverter;
 import com.linkedin.coral.hive.hive2rel.DaliOperatorTable;
-import com.linkedin.coral.hive.hive2rel.HiveConvertletTable;
 import com.linkedin.coral.hive.hive2rel.HiveRelBuilder;
 import com.linkedin.coral.hive.hive2rel.HiveSqlValidator;
 import com.linkedin.coral.hive.hive2rel.functions.HiveFunctionResolver;
@@ -64,7 +64,7 @@ public class TrinoToRelConverter extends ToRelConverter {
 
   @Override
   protected SqlRexConvertletTable getConvertletTable() {
-    return new HiveConvertletTable();
+    return new CoralConvertletTable();
   }
 
   @Override

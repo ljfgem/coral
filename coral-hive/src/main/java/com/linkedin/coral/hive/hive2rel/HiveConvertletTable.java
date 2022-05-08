@@ -13,18 +13,14 @@ import com.google.common.base.Preconditions;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
-import org.apache.calcite.sql.fun.SqlCastFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql2rel.ReflectiveConvertletTable;
 import org.apache.calcite.sql2rel.SqlRexContext;
-import org.apache.calcite.sql2rel.SqlRexConvertlet;
-import org.apache.calcite.sql2rel.StandardConvertletTable;
 
 import com.linkedin.coral.com.google.common.collect.ImmutableList;
-import com.linkedin.coral.common.functions.FunctionFieldReferenceOperator;
+import com.linkedin.coral.common.CoralConvertletTable;
 import com.linkedin.coral.hive.hive2rel.functions.HiveInOperator;
 import com.linkedin.coral.hive.hive2rel.functions.HiveNamedStructFunction;
 
@@ -33,7 +29,7 @@ import com.linkedin.coral.hive.hive2rel.functions.HiveNamedStructFunction;
  * ConvertletTable for Hive Operators
  * @see ReflectiveConvertletTable documentation for method naming and visibility rules
  */
-public class HiveConvertletTable extends ReflectiveConvertletTable {
+public class HiveConvertletTable extends CoralConvertletTable {
 
   @SuppressWarnings("unused")
   public RexNode convertNamedStruct(SqlRexContext cx, HiveNamedStructFunction func, SqlCall call) {
@@ -59,30 +55,5 @@ public class HiveConvertletTable extends ReflectiveConvertletTable {
 
     RelDataType retType = cx.getValidator().getValidatedNodeType(call);
     return cx.getRexBuilder().makeCall(retType, HiveInOperator.IN, rexNodes.build());
-  }
-
-  @SuppressWarnings("unused")
-  public RexNode convertFunctionFieldReferenceOperator(SqlRexContext cx, FunctionFieldReferenceOperator op,
-      SqlCall call) {
-    RexNode funcExpr = cx.convertExpression(call.operand(0));
-    String fieldName = FunctionFieldReferenceOperator.fieldNameStripQuotes(call.operand(1));
-    return cx.getRexBuilder().makeFieldAccess(funcExpr, fieldName, false);
-  }
-
-  @SuppressWarnings("unused")
-  public RexNode convertCast(SqlRexContext cx, SqlCastFunction cast, SqlCall call) {
-    final SqlNode left = call.operand(0);
-    RexNode leftRex = cx.convertExpression(left);
-    SqlDataTypeSpec dataType = call.operand(1);
-    RelDataType castType = dataType.deriveType(cx.getValidator(), true);
-    // can not call RexBuilder.makeCast() since that optimizes to remove the cast
-    // we don't want to remove the cast
-    return cx.getRexBuilder().makeAbstractCast(castType, leftRex);
-  }
-
-  @Override
-  public SqlRexConvertlet get(SqlCall call) {
-    SqlRexConvertlet convertlet = super.get(call);
-    return convertlet != null ? convertlet : StandardConvertletTable.INSTANCE.get(call);
   }
 }
