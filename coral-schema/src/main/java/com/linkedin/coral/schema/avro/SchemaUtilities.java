@@ -16,6 +16,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
+import com.linkedin.avroutil1.compatibility.AvroCompatibilityHelper;
 
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
@@ -36,7 +37,6 @@ import org.apache.hadoop.hive.serde2.typeinfo.StructTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
-import org.codehaus.jackson.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -184,7 +184,7 @@ class SchemaUtilities {
     Preconditions.checkNotNull(field);
     Preconditions.checkNotNull(fieldAssembler);
 
-    JsonNode defaultValue = field.defaultValue();
+    Object defaultValue = defaultValue(field);
 
     SchemaBuilder.GenericDefault genericDefault =
         fieldAssembler.name(field.name()).doc(field.doc()).type(field.schema());
@@ -258,7 +258,7 @@ class SchemaUtilities {
     Preconditions.checkNotNull(field);
     Preconditions.checkNotNull(fieldAssembler);
 
-    JsonNode defaultValue = field.defaultValue();
+    Object defaultValue = defaultValue(field);
 
     SchemaBuilder.GenericDefault genericDefault = fieldAssembler.name(fieldName).doc(field.doc()).type(field.schema());
     if (defaultValue != null) {
@@ -359,15 +359,22 @@ class SchemaUtilities {
     for (Schema.Field field : fieldList) {
       String fieldDoc = isPartCol ? "This is the partition column. "
           + "Partition columns, if present in the schema, should also be projected in the data." : field.doc();
-      Schema.Field clonedField =
-          new Schema.Field(field.name(), field.schema(), fieldDoc, field.defaultValue(), field.order());
+      Schema.Field clonedField = AvroCompatibilityHelper.createSchemaField(field.name(), field.schema(), fieldDoc,
+          defaultValue(field), field.order());
       // Copy field level properties, which could be critical for things like logical type.
-      for (Map.Entry<String, JsonNode> prop : field.getJsonProps().entrySet()) {
+      for (Map.Entry<String, Object> prop : field.getObjectProps().entrySet()) {
         clonedField.addProp(prop.getKey(), prop.getValue());
       }
       result.add(clonedField);
     }
     return result;
+  }
+
+  public static Object defaultValue(Schema.Field field) {
+    if (AvroCompatibilityHelper.fieldHasDefault(field)) {
+      return AvroCompatibilityHelper.getGenericDefaultValue(field);
+    }
+    return null;
   }
 
   /**
@@ -379,7 +386,7 @@ class SchemaUtilities {
   }
 
   static void replicateSchemaProps(Schema srcSchema, Schema targetSchema) {
-    for (Map.Entry<String, JsonNode> prop : srcSchema.getJsonProps().entrySet()) {
+    for (Map.Entry<String, Object> prop : srcSchema.getObjectProps().entrySet()) {
       if (targetSchema.getProp(prop.getKey()) == null) {
         targetSchema.addProp(prop.getKey(), prop.getValue());
       }
@@ -508,9 +515,9 @@ class SchemaUtilities {
       Schema.Field rightField = rightSchemaFieldsMap.get(leftField.name());
       Schema unionFieldSchema = getUnionFieldSchema(leftField.schema(), rightField.schema(), strictMode);
       Schema.Field unionField = new Schema.Field(leftField.name(), unionFieldSchema, leftField.doc(),
-          leftField.defaultValue(), leftField.order());
+          defaultValue(leftField), leftField.order());
       leftField.aliases().forEach(unionField::addAlias);
-      leftField.getJsonProps().forEach(unionField::addProp);
+      leftField.getObjectProps().forEach(unionField::addProp);
       mergedSchemaFields.add(unionField);
     }
     Schema schema = Schema.createRecord(leftSchema.getName(), leftSchema.getDoc(), leftSchema.getNamespace(), false);
@@ -660,7 +667,7 @@ class SchemaUtilities {
         break;
     }
 
-    JsonNode defaultValue = field.defaultValue();
+    Object defaultValue = defaultValue(field);
     SchemaBuilder.GenericDefault genericDefault = fieldAssembler.name(field.name()).doc(field.doc()).type(fieldSchema);
     if (defaultValue != null) {
       genericDefault.withDefault(defaultValue);
@@ -702,7 +709,7 @@ class SchemaUtilities {
         case ARRAY:
           Schema newFieldSchema = setupNestedNamespace(field.schema(), nestedNamespace);
           Schema.Field newField =
-              new Schema.Field(field.name(), newFieldSchema, field.doc(), field.defaultValue(), field.order());
+              new Schema.Field(field.name(), newFieldSchema, field.doc(), defaultValue(field), field.order());
           appendField(newField, fieldAssembler);
           break;
         case ENUM:
@@ -711,7 +718,7 @@ class SchemaUtilities {
         case RECORD:
           Schema recordSchemaWithNestedNamespace = setupNestedNamespaceForRecord(field.schema(), nestedNamespace);
           Schema.Field newRecordFiled = new Schema.Field(field.name(), recordSchemaWithNestedNamespace, field.doc(),
-              field.defaultValue(), field.order());
+              defaultValue(field), field.order());
           appendField(newRecordFiled, fieldAssembler);
           break;
         default:
@@ -889,9 +896,9 @@ class SchemaUtilities {
   }
 
   static Schema.Field copyField(Schema.Field field, Schema newSchema) {
-    Schema.Field copy = new Schema.Field(field.name(), newSchema, field.doc(), field.defaultValue(), field.order());
+    Schema.Field copy = new Schema.Field(field.name(), newSchema, field.doc(), defaultValue(field), field.order());
 
-    for (Map.Entry<String, JsonNode> prop : field.getJsonProps().entrySet()) {
+    for (Map.Entry<String, Object> prop : field.getObjectProps().entrySet()) {
       copy.addProp(prop.getKey(), prop.getValue());
     }
 

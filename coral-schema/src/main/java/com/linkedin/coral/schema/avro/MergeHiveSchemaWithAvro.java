@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.avro.JsonProperties;
 import org.apache.avro.Schema;
 import org.apache.hadoop.hive.serde2.avro.AvroSerDe;
 import org.apache.hadoop.hive.serde2.typeinfo.DecimalTypeInfo;
@@ -19,7 +20,6 @@ import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.StructTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.UnionTypeInfo;
-import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.JsonNodeFactory;
 
 import com.linkedin.coral.com.google.common.base.Preconditions;
@@ -72,7 +72,7 @@ class MergeHiveSchemaWithAvro extends HiveSchemaWithPartnerVisitor<Schema, Schem
       // TODO: How to ensure that field default value is compatible with new field type generated from Hive?
       // Copy field type from the visitor result, copy everything else from the partner
       // Avro requires the default value to match the first type in the option, reorder option if required
-      Schema reordered = reorderOptionIfRequired(fieldResult, partner.defaultValue());
+      Schema reordered = reorderOptionIfRequired(fieldResult, SchemaUtilities.defaultValue(partner));
       return SchemaUtilities.copyField(partner, reordered);
     }
   }
@@ -83,10 +83,10 @@ class MergeHiveSchemaWithAvro extends HiveSchemaWithPartnerVisitor<Schema, Schem
    * e.g. If the schema is (NULL, INT) and the default value is 1, the returned schema is (INT, NULL)
    * If the schema is not an option schema or if there is no default value, schema is returned as-is
    */
-  private Schema reorderOptionIfRequired(Schema schema, JsonNode defaultValue) {
+  private Schema reorderOptionIfRequired(Schema schema, Object defaultValue) {
     if (isNullableType(schema) && defaultValue != null) {
       boolean isNullFirstOption = schema.getTypes().get(0).getType() == Schema.Type.NULL;
-      if (isNullFirstOption && defaultValue.isNull()) {
+      if (isNullFirstOption && defaultValue.equals(JsonProperties.NULL_VALUE)) {
         return schema;
       } else {
         return Schema.createUnion(Arrays.asList(schema.getTypes().get(1), schema.getTypes().get(0)));
@@ -265,8 +265,8 @@ class MergeHiveSchemaWithAvro extends HiveSchemaWithPartnerVisitor<Schema, Schem
         JsonNodeFactory factory = JsonNodeFactory.instance;
         Schema decimalSchema = Schema.create(Schema.Type.BYTES);
         decimalSchema.addProp(AvroSerDe.AVRO_PROP_LOGICAL_TYPE, AvroSerDe.DECIMAL_TYPE_NAME);
-        decimalSchema.addProp(AvroSerDe.AVRO_PROP_PRECISION, factory.numberNode(dti.getPrecision()));
-        decimalSchema.addProp(AvroSerDe.AVRO_PROP_SCALE, factory.numberNode(dti.getScale()));
+        decimalSchema.addProp(AvroSerDe.AVRO_PROP_PRECISION, dti.getPrecision());
+        decimalSchema.addProp(AvroSerDe.AVRO_PROP_SCALE, dti.getScale());
 
         return decimalSchema;
 

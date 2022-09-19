@@ -17,3 +17,9 @@ dependencies {
   testCompile deps.'hadoop'.'hadoop-mapreduce-client-core'
   testCompile deps.'kryo'
 }
+
+configurations.all {
+  resolutionStrategy {
+    force 'org.apache.avro:avro:1.10.2'
+  }
+}
