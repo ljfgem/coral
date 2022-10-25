@@ -530,8 +530,8 @@ class SchemaUtilities {
       // We need to reorder the union option if necessary
       // i.e. defaultValue = 1, unionFieldSchema = [null, int], we need to reorder `unionFieldSchema` to be [int, null]
       // otherwise, schema validation will fail and cause exception
-      final Schema reorderUnionFieldSchema = reorderOptionIfRequired(unionFieldSchema, defaultValue);
-      Schema.Field unionField = AvroCompatibilityHelper.createSchemaField(leftField.name(), reorderUnionFieldSchema,
+      // final Schema reorderUnionFieldSchema = reorderOptionIfRequired(unionFieldSchema, defaultValue);
+      Schema.Field unionField = AvroCompatibilityHelper.createSchemaField(leftField.name(), unionFieldSchema,
           leftField.doc(), defaultValue, leftField.order());
       leftField.aliases().forEach(unionField::addAlias);
       replicateFieldProps(leftField, unionField);
