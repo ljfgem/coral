@@ -22,6 +22,7 @@ import org.apache.calcite.sql2rel.SqlRexConvertletTable;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.hadoop.hive.metastore.api.Table;
 
+import com.linkedin.coral.common.FuzzyUnionSqlRewriter;
 import com.linkedin.coral.common.HiveMetastoreClient;
 import com.linkedin.coral.common.ToRelConverter;
 import com.linkedin.coral.hive.hive2rel.functions.HiveFunctionResolver;
@@ -92,12 +93,16 @@ public class HiveToRelConverter extends ToRelConverter {
 
   @Override
   protected SqlNode toSqlNode(String sql, Table hiveView) {
-    return parseTreeBuilder.process(trimParenthesis(sql), hiveView);
+    final SqlNode sqlNode = parseTreeBuilder.process(trimParenthesis(sql), hiveView);
+    if (hiveView != null) {
+      sqlNode.accept(new FuzzyUnionSqlRewriter(hiveView.getTableName(), this));
+    }
+    return sqlNode.accept(new HiveToCoralOperatorConverter(getSqlValidator()));
   }
 
   @Override
   protected RelNode standardizeRel(RelNode relNode) {
-    return new HiveRelConverter().convert(relNode);
+    return relNode;
   }
 
   private static String trimParenthesis(String value) {

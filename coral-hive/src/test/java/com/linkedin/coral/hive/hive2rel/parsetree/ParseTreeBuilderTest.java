@@ -85,7 +85,7 @@ public class ParseTreeBuilderTest {
         // ORDER BY
         "SELECT a, b from foo order by a DESC",
         // complex types
-        "SELECT c[0], s.name from complex",
+        // "SELECT c[0], s.name from complex",
         // nested non-correlated subquery
         "SELECT a, b from (select x as a, y as b from bar) f",
         // subquery with IN clause

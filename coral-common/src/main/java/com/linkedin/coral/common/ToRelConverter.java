@@ -1,5 +1,5 @@
 /**
- * Copyright 2017-2022 LinkedIn Corporation. All rights reserved.
+ * Copyright 2017-2023 LinkedIn Corporation. All rights reserved.
  * Licensed under the BSD-2 Clause license.
  * See LICENSE in the project root for license information.
  */
@@ -129,7 +129,6 @@ public abstract class ToRelConverter {
    */
   public RelNode convertView(String hiveDbName, String hiveViewName) {
     SqlNode sqlNode = processView(hiveDbName, hiveViewName);
-    sqlNode.accept(new FuzzyUnionSqlRewriter(hiveViewName, this));
     return toRel(sqlNode);
   }
 
