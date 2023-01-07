@@ -5,6 +5,9 @@
  */
 package com.linkedin.coral.common.transformers;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlSelect;
@@ -20,8 +23,7 @@ import com.linkedin.coral.common.ToRelConverter;
 public abstract class OperatorTransformer {
   protected SqlNode inputSqlNode;
   private ToRelConverter toRelConverter;
-  private SqlSelect topSelectNode;
-  private Boolean isTopSelectNodeConverted = false;
+  private List<SqlSelect> topSelectNodes = new ArrayList<>();
 
   protected abstract boolean condition();
 
@@ -34,8 +36,8 @@ public abstract class OperatorTransformer {
   public SqlNode apply(SqlNode inputSqlNode, ToRelConverter toRelConverter) {
     this.inputSqlNode = inputSqlNode;
     this.toRelConverter = toRelConverter;
-    if (inputSqlNode instanceof SqlSelect && topSelectNode == null) {
-      topSelectNode = (SqlSelect) inputSqlNode;
+    if (inputSqlNode instanceof SqlSelect) {
+      topSelectNodes.add((SqlSelect) inputSqlNode);
     }
     if (condition()) {
       return transform();
@@ -51,12 +53,16 @@ public abstract class OperatorTransformer {
     if (toRelConverter == null) {
       throw new RuntimeException("Please provide toRelConverter to get the RelDataType of a SqlNode!");
     }
-    if (!isTopSelectNodeConverted) {
-      toRelConverter.toRel(topSelectNode);
-      isTopSelectNodeConverted = true;
+    for (int i = topSelectNodes.size() - 1; i >= 0; --i) {
+      final SqlSelect topSelectNode = topSelectNodes.get(i);
+      try {
+        toRelConverter.toRel(topSelectNode);
+        final SqlValidator sqlValidator = toRelConverter.getSqlValidator();
+        final SqlValidatorScope selectScope = sqlValidator.getSelectScope(topSelectNode);
+        return sqlValidator.deriveType(selectScope, sqlNode);
+      } catch (Throwable ignored) {
+      }
     }
-    final SqlValidator sqlValidator = toRelConverter.getSqlValidator();
-    final SqlValidatorScope selectScope = sqlValidator.getSelectScope(topSelectNode);
-    return sqlValidator.deriveType(selectScope, sqlNode);
+    throw new RuntimeException("Failed to derive the RelDataType for SqlNode " + sqlNode);
   }
 }
