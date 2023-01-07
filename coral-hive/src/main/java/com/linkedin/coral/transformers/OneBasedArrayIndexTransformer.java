@@ -23,10 +23,13 @@ import com.linkedin.coral.common.transformers.OperatorTransformer;
  * Transformer to convert SqlCall from array[i] to array[i+1] to ensure array indexes start at 1.
  */
 public class OneBasedArrayIndexTransformer extends OperatorTransformer {
+
+  private static final String ITEM_OPERATOR = "ITEM";
+
   @Override
   public boolean condition() {
     if (inputSqlNode instanceof SqlBasicCall
-        && "ITEM".equalsIgnoreCase(((SqlBasicCall) inputSqlNode).getOperator().getName())) {
+        && ITEM_OPERATOR.equalsIgnoreCase(((SqlBasicCall) inputSqlNode).getOperator().getName())) {
       final SqlNode columnNode = ((SqlBasicCall) inputSqlNode).getOperandList().get(0);
       return getRelDataType(columnNode) instanceof ArraySqlType;
     }

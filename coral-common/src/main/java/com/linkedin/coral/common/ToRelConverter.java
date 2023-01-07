@@ -21,7 +21,6 @@ import org.apache.calcite.jdbc.Driver;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.schema.SchemaPlus;
@@ -57,21 +56,13 @@ public abstract class ToRelConverter {
 
   protected abstract SqlRexConvertletTable getConvertletTable();
 
-  protected abstract SqlValidator getSqlValidator();
+  public abstract SqlValidator getSqlValidator();
 
   protected abstract SqlOperatorTable getOperatorTable();
 
   protected abstract SqlToRelConverter getSqlToRelConverter();
 
   protected abstract SqlNode toSqlNode(String sql, org.apache.hadoop.hive.metastore.api.Table hiveView);
-
-  /**
-   * Apply series of transforms to convert Hive relnode to
-   * standardized intermediate representation.
-   * @param relNode calcite relnode representing hive query
-   * @return standard representation of input query as relnode
-   */
-  protected abstract RelNode standardizeRel(RelNode relNode);
 
   protected ToRelConverter(@Nonnull HiveMetastoreClient hiveMetastoreClient) {
     checkNotNull(hiveMetastoreClient);
@@ -161,9 +152,8 @@ public abstract class ToRelConverter {
   }
 
   @VisibleForTesting
-  protected RelNode toRel(SqlNode sqlNode) {
-    RelRoot root = getSqlToRelConverter().convertQuery(sqlNode, true, true);
-    return standardizeRel(root.rel);
+  public RelNode toRel(SqlNode sqlNode) {
+    return getSqlToRelConverter().convertQuery(sqlNode, true, true).rel;
   }
 
   /**

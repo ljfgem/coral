@@ -12,7 +12,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
-import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -70,7 +69,7 @@ public class HiveToRelConverter extends ToRelConverter {
   }
 
   @Override
-  protected SqlValidator getSqlValidator() {
+  public SqlValidator getSqlValidator() {
     return sqlValidator;
   }
 
@@ -97,12 +96,7 @@ public class HiveToRelConverter extends ToRelConverter {
     if (hiveView != null) {
       sqlNode.accept(new FuzzyUnionSqlRewriter(hiveView.getTableName(), this));
     }
-    return sqlNode.accept(new HiveToCoralOperatorConverter(getSqlValidator()));
-  }
-
-  @Override
-  protected RelNode standardizeRel(RelNode relNode) {
-    return relNode;
+    return sqlNode.accept(new HiveToCoralOperatorConverter(this));
   }
 
   private static String trimParenthesis(String value) {
@@ -112,5 +106,4 @@ public class HiveToRelConverter extends ToRelConverter {
     }
     return str;
   }
-
 }

@@ -10,9 +10,9 @@ import java.util.List;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.util.SqlShuttle;
-import org.apache.calcite.sql.validate.SqlValidator;
 
 import com.linkedin.coral.com.google.common.collect.ImmutableList;
+import com.linkedin.coral.common.ToRelConverter;
 import com.linkedin.coral.common.transformers.OperatorTransformer;
 import com.linkedin.coral.transformers.OneBasedArrayIndexTransformer;
 
@@ -21,17 +21,17 @@ import com.linkedin.coral.transformers.OneBasedArrayIndexTransformer;
  * Converts Hive SqlNode to Coral SqlNode
  */
 public class HiveToCoralOperatorConverter extends SqlShuttle {
-  private final SqlValidator sqlValidator;
+  private final ToRelConverter toRelConverter;
   private final List<OperatorTransformer> OPERATOR_TRANSFORMERS = ImmutableList.of(new OneBasedArrayIndexTransformer());
 
-  public HiveToCoralOperatorConverter(SqlValidator sqlValidator) {
-    this.sqlValidator = sqlValidator;
+  public HiveToCoralOperatorConverter(ToRelConverter toRelConverter) {
+    this.toRelConverter = toRelConverter;
   }
 
   @Override
   public SqlNode visit(SqlCall call) {
     for (OperatorTransformer operatorTransformer : OPERATOR_TRANSFORMERS) {
-      call = (SqlCall) operatorTransformer.apply(call, sqlValidator);
+      call = (SqlCall) operatorTransformer.apply(call, toRelConverter);
     }
     return super.visit(call);
   }
