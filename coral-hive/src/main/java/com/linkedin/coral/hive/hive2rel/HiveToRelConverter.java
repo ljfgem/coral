@@ -14,6 +14,7 @@ import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.util.ChainedSqlOperatorTable;
 import org.apache.calcite.sql.validate.SqlValidator;
@@ -96,7 +97,9 @@ public class HiveToRelConverter extends ToRelConverter {
     if (hiveView != null) {
       sqlNode.accept(new FuzzyUnionSqlRewriter(hiveView.getTableName(), this));
     }
-    return sqlNode.accept(new HiveSqlNodeToCoralSqlNodeConverter(getSqlValidator()));
+    getSqlValidator().validate(sqlNode);
+    return sqlNode.accept(new HiveSqlNodeToCoralSqlNodeConverter(getSqlValidator(),
+        getSqlValidator().getSelectScope((SqlSelect) sqlNode)));
   }
 
   private static String trimParenthesis(String value) {
