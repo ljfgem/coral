@@ -54,7 +54,7 @@ public class HiveToTrinoConverterTest {
 
         { "test", "t_dot_star_view", "SELECT \"tablea\".\"a\" AS \"a\", \"tablea\".\"b\" AS \"b\", \"tablea0\".\"b\" AS \"tbb\"\n"
             + "FROM \"test\".\"tablea\"\n"
-            + "INNER JOIN \"test\".\"tablea\" AS \"tablea0\" ON \"tablea\".\"a\" = \"tablea0\".\"a\"" },
+            + "INNER JOIN \"test\".\"tablea\" AS \"tablea0\" ON TRY_CAST(\"tablea\".\"a\" AS VARCHAR) = TRY_CAST(\"tablea0\".\"a\" AS VARCHAR)" },
 
         { "test", "fuzzy_union_view", "SELECT *\nFROM \"test\".\"tablea\"\nUNION ALL\n"
             + "SELECT *\nFROM \"test\".\"tablea\"" },
@@ -186,7 +186,7 @@ public class HiveToTrinoConverterTest {
             + "FROM (SELECT \"duplicate_column_name_a\".\"some_id\" AS \"some_id\", \"t\".\"SOME_ID\" AS \"SOME_ID0\"\n"
             + "FROM \"test\".\"duplicate_column_name_a\"\n"
             + "LEFT JOIN (SELECT TRIM(\"some_id\") AS \"SOME_ID\", CAST(TRIM(\"some_id\") AS VARCHAR(65536)) AS \"$f1\"\n"
-            + "FROM \"test\".\"duplicate_column_name_b\") AS \"t\" ON \"duplicate_column_name_a\".\"some_id\" = \"t\".\"$f1\") AS \"t0\"\n"
+            + "FROM \"test\".\"duplicate_column_name_b\") AS \"t\" ON TRY_CAST(\"duplicate_column_name_a\".\"some_id\" AS VARCHAR) = TRY_CAST(\"t\".\"$f1\" AS VARCHAR)) AS \"t0\"\n"
             + "WHERE \"t0\".\"some_id\" <> ''" } };
   }
 

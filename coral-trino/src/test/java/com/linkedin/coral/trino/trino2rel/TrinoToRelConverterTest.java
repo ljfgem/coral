@@ -110,9 +110,9 @@ public class TrinoToRelConverterTest {
             "LogicalProject(EXPR$0=[AND(OR(IS NOT NULL($3), IS NOT NULL($4)), IS NOT TRUE(=($3, $4)))])\n"
                 + "  LogicalFilter(condition=[NOT(AND(OR(IS NOT NULL($1), IS NOT NULL($2)), IS NOT TRUE(=($1, $2))))])\n"
                 + "    LogicalTableScan(table=[[hive, default, foo]])\n",
-            "SELECT (\"x\" IS NOT NULL OR \"y\" IS NOT NULL) AND \"x\" = \"y\" IS NOT TRUE\n"
+            "SELECT (\"x\" IS NOT NULL OR \"y\" IS NOT NULL) AND TRY_CAST(\"x\" AS VARCHAR) = TRY_CAST(\"y\" AS VARCHAR) IS NOT TRUE\n"
                 + "FROM \"default\".\"foo\"\n"
-                + "WHERE NOT ((\"a\" IS NOT NULL OR \"b\" IS NOT NULL) AND \"a\" = \"b\" IS NOT TRUE)"))
+        + "WHERE NOT ((\"a\" IS NOT NULL OR \"b\" IS NOT NULL) AND TRY_CAST(\"a\" AS VARCHAR) = TRY_CAST(\"b\" AS VARCHAR) IS NOT TRUE)"))
         .add(new TrinoToRelTestDataProvider("select x[1] from my_table",
             "LogicalProject(EXPR$0=[ITEM($0, 1)])\n" + "  LogicalTableScan(table=[[hive, default, my_table]])\n",
             "SELECT element_at(\"x\", 1)\n" + "FROM \"default\".\"my_table\""))
@@ -179,7 +179,8 @@ public class TrinoToRelConverterTest {
                 + "    LogicalProject(EXPR$0=[123])\n" + "      LogicalTableScan(table=[[hive, default, foo]])\n"
                 + "    LogicalProject(EXPR$0=[999])\n" + "      LogicalTableScan(table=[[hive, default, foo]])\n",
             "SELECT COALESCE(999, 999) AS \"ID\"\n" + "FROM (SELECT 123\n" + "FROM \"default\".\"foo\") AS \"t\"\n"
-                + "INNER JOIN (SELECT 999\n" + "FROM \"default\".\"foo\") AS \"t0\" ON 999 = 999"))
+                + "INNER JOIN (SELECT 999\n"
+                + "FROM \"default\".\"foo\") AS \"t0\" ON TRY_CAST(999 AS VARCHAR) = TRY_CAST(999 AS VARCHAR)"))
         .add(new TrinoToRelTestDataProvider("select cast('123' as bigint)",
             "LogicalProject(EXPR$0=[CAST('123'):BIGINT])\n" + "  LogicalValues(tuples=[[{ 0 }]])\n",
             "SELECT CAST('123' AS BIGINT)\n" + "FROM (VALUES  (0)) AS \"t\" (\"ZERO\")"))

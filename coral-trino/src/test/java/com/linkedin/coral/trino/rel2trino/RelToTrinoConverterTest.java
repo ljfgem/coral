@@ -191,7 +191,7 @@ public class RelToTrinoConverterTest {
 
     String s = "select tableOne.tcol as tcol, tableOne.scol as scol\n" + "FROM " + tableOne + "\n"
         + "INNER JOIN (select ifield as ifield\n" + "from " + tableTwo + "\n" + "where ifield < 10\n"
-        + "group by ifield) as \"t1\" on tableOne.icol = \"t1\".\"IFIELD\"";
+        + "group by ifield) as \"t1\" on TRY_CAST(tableOne.icol AS VARCHAR) = TRY_CAST(\"t1\".\"IFIELD\" AS VARCHAR)";
     String expectedSql = quoteColumns(upcaseKeywords(s));
     testConversion(sql, expectedSql);
   }
@@ -288,8 +288,9 @@ public class RelToTrinoConverterTest {
   private void testSetQueries(String operator) {
     String sql = "SELECT icol FROM " + tableOne + " " + operator + "\n" + "SELECT ifield FROM "
         + TABLE_TWO.getTableName() + " WHERE sfield = 'abc'";
-    String expectedSql = formatSql("SELECT icol as icol FROM " + tableOne + " " + operator
-        + " SELECT ifield as ifield from " + tableTwo + " " + "where sfield = 'abc'");
+    String expectedSql =
+        formatSql("SELECT icol as icol FROM " + tableOne + " " + operator + " SELECT ifield as ifield from " + tableTwo
+            + " " + "where TRY_CAST(sfield AS VARCHAR) = TRY_CAST('abc' AS VARCHAR)");
     testConversion(sql, expectedSql);
   }
 
@@ -385,7 +386,7 @@ public class RelToTrinoConverterTest {
   public void testJoin() {
     String sql = "SELECT a.icol, b.dfield  FROM " + tableOne + " a JOIN " + tableTwo + " b ON a.scol = b.sfield";
     String expectedSql = formatSql("SELECT tableOne.icol AS ICOL, tableTwo.dfield as DFIELD\nFROM " + tableOne
-        + "\nINNER JOIN " + tableTwo + " ON tableOne.scol = tableTwo.sfield");
+        + "\nINNER JOIN " + tableTwo + " ON TRY_CAST(tableOne.scol AS VARCHAR) = TRY_CAST(tableTwo.sfield AS VARCHAR)");
     testConversion(sql, expectedSql);
   }
 
@@ -393,7 +394,7 @@ public class RelToTrinoConverterTest {
   public void testLeftJoin() {
     String sql = "SELECT a.icol, b.dfield  FROM " + tableOne + " a LEFT JOIN " + tableTwo + " b ON a.scol = b.sfield";
     String expectedSql = formatSql("SELECT tableOne.icol AS ICOL, tableTwo.dfield as DFIELD\nFROM " + tableOne
-        + "\nLEFT JOIN " + tableTwo + " ON tableOne.scol = tableTwo.sfield");
+        + "\nLEFT JOIN " + tableTwo + " ON TRY_CAST(tableOne.scol AS VARCHAR) = TRY_CAST(tableTwo.sfield AS VARCHAR)");
     testConversion(sql, expectedSql);
   }
 
@@ -401,7 +402,7 @@ public class RelToTrinoConverterTest {
   public void testRightJoin() {
     String sql = "SELECT a.icol, b.dfield  FROM " + tableOne + " a RIGHT JOIN " + tableTwo + " b ON a.scol = b.sfield";
     String expectedSql = formatSql("SELECT tableOne.icol AS ICOL, tableTwo.dfield as DFIELD\nFROM " + tableOne
-        + "\nRIGHT JOIN " + tableTwo + " ON tableOne.scol = tableTwo.sfield");
+        + "\nRIGHT JOIN " + tableTwo + " ON TRY_CAST(tableOne.scol AS VARCHAR) = TRY_CAST(tableTwo.sfield AS VARCHAR)");
     testConversion(sql, expectedSql);
   }
 
@@ -410,7 +411,7 @@ public class RelToTrinoConverterTest {
     String sql =
         "SELECT a.icol, b.dfield  FROM " + tableOne + " a FULL OUTER JOIN " + tableTwo + " b ON a.scol = b.sfield";
     String expectedSql = formatSql("SELECT tableOne.icol AS ICOL, tableTwo.dfield as DFIELD\nFROM " + tableOne
-        + "\nFULL JOIN " + tableTwo + " ON tableOne.scol = tableTwo.sfield");
+        + "\nFULL JOIN " + tableTwo + " ON TRY_CAST(tableOne.scol AS VARCHAR) = TRY_CAST(tableTwo.sfield AS VARCHAR)");
     testConversion(sql, expectedSql);
   }
 
@@ -418,9 +419,9 @@ public class RelToTrinoConverterTest {
   public void testTryCastIntTrino() {
     String sql =
         "SELECT CASE WHEN a.scol= 0 THEN TRUE ELSE FALSE END AS testcol FROM " + tableOne + " a WHERE a.scol = 1";
-    String expectedSql =
-        formatSql("SELECT CASE WHEN TRY_CAST(scol AS INTEGER) = 0 THEN TRUE ELSE FALSE END AS TESTCOL\nFROM " + tableOne
-            + "\nWHERE " + "TRY_CAST(scol AS INTEGER) = 1");
+    String expectedSql = formatSql(
+        "SELECT CASE WHEN TRY_CAST(scol AS VARCHAR) = TRY_CAST(0 AS VARCHAR) THEN TRUE ELSE FALSE END AS TESTCOL\nFROM "
+            + tableOne + "\nWHERE " + "TRY_CAST(scol AS VARCHAR) = TRY_CAST(1 AS VARCHAR)");
     testConversion(sql, expectedSql);
   }
 
@@ -428,21 +429,24 @@ public class RelToTrinoConverterTest {
   public void testTryCastBooleanTrino() {
     String sql = "SELECT CASE WHEN a.scol= TRUE THEN TRUE ELSE FALSE END AS testcol FROM " + tableOne
         + " a WHERE a.scol = FALSE";
-    String expectedSql =
-        formatSql("SELECT CASE WHEN TRY_CAST(scol AS BOOLEAN) = TRUE THEN TRUE ELSE FALSE END AS TESTCOL\nFROM "
-            + tableOne + "\nWHERE " + "TRY_CAST(scol AS BOOLEAN) = FALSE");
+    String expectedSql = formatSql(
+        "SELECT CASE WHEN TRY_CAST(scol AS VARCHAR) = TRY_CAST(TRUE AS VARCHAR) THEN TRUE ELSE FALSE END AS TESTCOL\nFROM "
+            + tableOne + "\nWHERE " + "TRY_CAST(scol AS VARCHAR) = TRY_CAST(FALSE AS VARCHAR)");
     testConversion(sql, expectedSql);
   }
 
   @Test
   public void testCase() {
     String sql = "SELECT case when icol = 0 then scol else 'other' end from " + tableOne;
-    String expected = formatSql("SELECT CASE WHEN icol = 0 THEN scol ELSE 'other' END FROM " + tableOne);
+    String expected =
+        formatSql("SELECT CASE WHEN TRY_CAST(icol AS VARCHAR) = TRY_CAST(0 AS VARCHAR) THEN scol ELSE 'other' END FROM "
+            + tableOne);
     testConversion(sql, expected);
 
     String sqlNull = "SELECT case when icol = 0 then scol end from " + tableOne;
-    String expectedNull =
-        formatSql("SELECT CASE WHEN icol = 0 THEN CAST(scol AS VARCHAR) ELSE NULL END FROM " + tableOne);
+    String expectedNull = formatSql(
+        "SELECT CASE WHEN TRY_CAST(icol AS VARCHAR) = TRY_CAST(0 AS VARCHAR) THEN CAST(scol AS VARCHAR) ELSE NULL END FROM "
+            + tableOne);
     testConversion(sqlNull, expectedNull);
   }
 
