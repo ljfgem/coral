@@ -8,10 +8,9 @@ package com.linkedin.coral.hive.hive2rel;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.util.SqlShuttle;
-import org.apache.calcite.sql.validate.SqlValidator;
-import org.apache.calcite.sql.validate.SqlValidatorScope;
 
 import com.linkedin.coral.common.transformers.OperatorTransformerList;
+import com.linkedin.coral.common.transformers.SqlNodeDataTypeUtil;
 import com.linkedin.coral.transformers.OneBasedArrayIndexTransformer;
 
 
@@ -21,8 +20,8 @@ import com.linkedin.coral.transformers.OneBasedArrayIndexTransformer;
 public class HiveSqlNodeToCoralSqlNodeConverter extends SqlShuttle {
   private final OperatorTransformerList operatorTransformerList;
 
-  public HiveSqlNodeToCoralSqlNodeConverter(SqlValidator sqlValidator, SqlValidatorScope selectScope) {
-    operatorTransformerList = OperatorTransformerList.of(new OneBasedArrayIndexTransformer(sqlValidator, selectScope));
+  public HiveSqlNodeToCoralSqlNodeConverter(SqlNodeDataTypeUtil sqlNodeDataTypeUtil) {
+    operatorTransformerList = OperatorTransformerList.of(new OneBasedArrayIndexTransformer(sqlNodeDataTypeUtil));
   }
 
   @Override

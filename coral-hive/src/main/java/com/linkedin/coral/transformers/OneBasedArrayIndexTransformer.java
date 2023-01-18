@@ -14,10 +14,9 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ArraySqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.validate.SqlValidator;
-import org.apache.calcite.sql.validate.SqlValidatorScope;
 
 import com.linkedin.coral.common.transformers.OperatorTransformer;
+import com.linkedin.coral.common.transformers.SqlNodeDataTypeUtil;
 
 
 /**
@@ -27,8 +26,8 @@ public class OneBasedArrayIndexTransformer extends OperatorTransformer {
 
   private static final String ITEM_OPERATOR = "ITEM";
 
-  public OneBasedArrayIndexTransformer(SqlValidator sqlValidator, SqlValidatorScope selectScope) {
-    super(sqlValidator, selectScope);
+  public OneBasedArrayIndexTransformer(SqlNodeDataTypeUtil sqlNodeDataTypeUtil) {
+    super(sqlNodeDataTypeUtil);
   }
 
   @Override

@@ -25,6 +25,7 @@ import org.apache.hadoop.hive.metastore.api.Table;
 import com.linkedin.coral.common.FuzzyUnionSqlRewriter;
 import com.linkedin.coral.common.HiveMetastoreClient;
 import com.linkedin.coral.common.ToRelConverter;
+import com.linkedin.coral.common.transformers.SqlNodeDataTypeUtil;
 import com.linkedin.coral.hive.hive2rel.functions.HiveFunctionResolver;
 import com.linkedin.coral.hive.hive2rel.functions.StaticHiveFunctionRegistry;
 import com.linkedin.coral.hive.hive2rel.parsetree.ParseTreeBuilder;
@@ -99,9 +100,8 @@ public class HiveToRelConverter extends ToRelConverter {
     }
     SqlValidator helperSqlValidator = new HiveSqlValidator(getOperatorTable(), getCalciteCatalogReader(),
         ((JavaTypeFactory) getRelBuilder().getTypeFactory()), HIVE_SQL);
-    helperSqlValidator.validate(sqlNode);
-    return sqlNode.accept(new HiveSqlNodeToCoralSqlNodeConverter(helperSqlValidator,
-        helperSqlValidator.getSelectScope((SqlSelect) sqlNode)));
+    return sqlNode.accept(
+        new HiveSqlNodeToCoralSqlNodeConverter(new SqlNodeDataTypeUtil(helperSqlValidator, (SqlSelect) sqlNode)));
   }
 
   private static String trimParenthesis(String value) {

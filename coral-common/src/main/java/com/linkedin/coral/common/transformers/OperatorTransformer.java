@@ -8,24 +8,20 @@ package com.linkedin.coral.common.transformers;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.validate.SqlValidator;
-import org.apache.calcite.sql.validate.SqlValidatorScope;
 
 
 /**
  * Abstract class for generic transformations on SqlCalls
  */
 public abstract class OperatorTransformer {
-  private SqlValidator sqlValidator;
-  private SqlValidatorScope selectScope;
+  SqlNodeDataTypeUtil sqlNodeDataTypeUtil;
 
   public OperatorTransformer() {
 
   }
 
-  public OperatorTransformer(SqlValidator sqlValidator, SqlValidatorScope selectScope) {
-    this.sqlValidator = sqlValidator;
-    this.selectScope = selectScope;
+  public OperatorTransformer(SqlNodeDataTypeUtil sqlNodeDataTypeUtil) {
+    this.sqlNodeDataTypeUtil = sqlNodeDataTypeUtil;
   }
 
   protected abstract boolean condition(SqlCall sqlCall);
@@ -41,9 +37,9 @@ public abstract class OperatorTransformer {
   }
 
   protected RelDataType getRelDataType(SqlNode sqlNode) {
-    if (sqlValidator == null) {
-      throw new RuntimeException("Please provide sqlValidator to get the RelDataType of a SqlNode!");
+    if (sqlNodeDataTypeUtil == null) {
+      throw new RuntimeException("Please provide sqlNodeDataTypeUtil to get the RelDataType of a SqlNode!");
     }
-    return sqlValidator.deriveType(selectScope, sqlNode);
+    return sqlNodeDataTypeUtil.getRelDataType(sqlNode);
   }
 }
