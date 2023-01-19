@@ -68,7 +68,8 @@ public class RelToTrinoConverterTest {
             + " order by scol ASC", tableOne);
 
     String expectedSql = formatSql("SELECT scol as SCOL, SUM(icol) AS s FROM " + tableOne
-        + " where dcol > 3.0 and icol < 5\n" + "group by scol\n" + "having sum(icol) > 10\n" + "order by scol");
+        + " where TRY_CAST(dcol AS VARCHAR) > TRY_CAST(3.0 AS VARCHAR) and TRY_CAST(icol AS VARCHAR) < TRY_CAST(5 AS VARCHAR)\n"
+        + "group by scol\n" + "having TRY_CAST(SUM(icol) AS VARCHAR) > TRY_CAST(10 AS VARCHAR)\n" + "order by scol");
     testConversion(sql, expectedSql);
   }
 
@@ -79,7 +80,7 @@ public class RelToTrinoConverterTest {
 
     String expectedSql =
         "SELECT element_at(\"mcol\", \"scol\").\"IFIELD\" AS \"MAPSTRUCTACCESS\", element_at(\"mcol\", \"scol\").\"SFIELD\" AS \"SFIELD\"\n"
-            + "FROM \"tableFour\"\n" + "WHERE \"icol\" < 5";
+            + "FROM \"tableFour\"\n" + "WHERE TRY_CAST(\"icol\" AS VARCHAR) < TRY_CAST(5 AS VARCHAR)";
     testConversion(sql, expectedSql);
   }
 
@@ -170,7 +171,8 @@ public class RelToTrinoConverterTest {
     String sql = "SELECT icol from tableOne where exists (select ifield from tableTwo where dfield > 32.00)";
     String expected =
         quoteColumns("SELECT tableOne.icol AS ICOL\n" + "FROM tableOne\n" + "LEFT JOIN (SELECT MIN(TRUE) AS \"$f0\"\n"
-            + "FROM tableTwo\n" + "WHERE dfield > 32.00) AS \"t1\" ON TRUE\n" + "WHERE \"t1\".\"$f0\" IS NOT NULL");
+            + "FROM tableTwo\n" + "WHERE TRY_CAST(dfield AS VARCHAR) > TRY_CAST(32.00 AS VARCHAR)) AS \"t1\" ON TRUE\n"
+            + "WHERE \"t1\".\"$f0\" IS NOT NULL");
     testConversion(sql, expected);
   }
 
@@ -179,7 +181,8 @@ public class RelToTrinoConverterTest {
     String sql = "SELECT icol from tableOne where not exists (select ifield from tableTwo where dfield > 32.00)";
     String expected =
         quoteColumns("SELECT tableOne.icol AS ICOL\n" + "FROM tableOne\n" + "LEFT JOIN (SELECT MIN(TRUE) AS \"$f0\"\n"
-            + "FROM tableTwo\n" + "WHERE dfield > 32.00) AS \"t1\" ON TRUE\n" + "WHERE NOT \"t1\".\"$f0\" IS NOT NULL");
+            + "FROM tableTwo\n" + "WHERE TRY_CAST(dfield AS VARCHAR) > TRY_CAST(32.00 AS VARCHAR)) AS \"t1\" ON TRUE\n"
+            + "WHERE NOT \"t1\".\"$f0\" IS NOT NULL");
     testConversion(sql, expected);
   }
 
@@ -190,7 +193,8 @@ public class RelToTrinoConverterTest {
         + "   WHERE ifield < 10)";
 
     String s = "select tableOne.tcol as tcol, tableOne.scol as scol\n" + "FROM " + tableOne + "\n"
-        + "INNER JOIN (select ifield as ifield\n" + "from " + tableTwo + "\n" + "where ifield < 10\n"
+        + "INNER JOIN (select ifield as ifield\n" + "from " + tableTwo + "\n"
+        + "where TRY_CAST(ifield AS VARCHAR) < TRY_CAST(10 AS VARCHAR)\n"
         + "group by ifield) as \"t1\" on TRY_CAST(tableOne.icol AS VARCHAR) = TRY_CAST(\"t1\".\"IFIELD\" AS VARCHAR)";
     String expectedSql = quoteColumns(upcaseKeywords(s));
     testConversion(sql, expectedSql);
@@ -331,7 +335,7 @@ public class RelToTrinoConverterTest {
     {
       final String sql = "SELECT icol FROM " + TABLE_ONE.getTableName() + " WHERE rand_integer(icol) > 10";
       final String expected = "SELECT \"icol\" AS \"ICOL\"\nFROM \"" + TABLE_ONE.getTableName() + "\""
-          + "\nWHERE \"RANDOM\"(\"icol\") > 10";
+          + "\nWHERE TRY_CAST(\"RANDOM\"(\"icol\") AS VARCHAR) > TRY_CAST(10 AS VARCHAR)";
       testConversion(sql, expected);
     }
   }
