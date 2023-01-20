@@ -112,7 +112,7 @@ public class TrinoToRelConverterTest {
                 + "    LogicalTableScan(table=[[hive, default, foo]])\n",
             "SELECT (\"x\" IS NOT NULL OR \"y\" IS NOT NULL) AND TRY_CAST(\"x\" AS VARCHAR) = TRY_CAST(\"y\" AS VARCHAR) IS NOT TRUE\n"
                 + "FROM \"default\".\"foo\"\n"
-        + "WHERE NOT ((\"a\" IS NOT NULL OR \"b\" IS NOT NULL) AND TRY_CAST(\"a\" AS VARCHAR) = TRY_CAST(\"b\" AS VARCHAR) IS NOT TRUE)"))
+                + "WHERE NOT ((\"a\" IS NOT NULL OR \"b\" IS NOT NULL) AND TRY_CAST(\"a\" AS VARCHAR) = TRY_CAST(\"b\" AS VARCHAR) IS NOT TRUE)"))
         .add(new TrinoToRelTestDataProvider("select x[1] from my_table",
             "LogicalProject(EXPR$0=[ITEM($0, 1)])\n" + "  LogicalTableScan(table=[[hive, default, my_table]])\n",
             "SELECT element_at(\"x\", 1)\n" + "FROM \"default\".\"my_table\""))
