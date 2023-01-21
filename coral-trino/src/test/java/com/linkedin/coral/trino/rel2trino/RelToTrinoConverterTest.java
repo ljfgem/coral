@@ -57,7 +57,7 @@ public class RelToTrinoConverterTest {
   }
 
   private String toTrinoSql(String sql) {
-    RelToTrinoConverter converter = new RelToTrinoConverter();
+    RelToTrinoConverter converter = new RelToTrinoConverter(hiveToRelConverter.getSqlValidator());
     return converter.convert(TestUtils.toRel(sql, config));
   }
 

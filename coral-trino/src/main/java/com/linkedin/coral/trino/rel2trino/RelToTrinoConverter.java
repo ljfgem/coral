@@ -28,6 +28,7 @@ import org.apache.calcite.sql.*;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.Util;
 
@@ -56,18 +57,21 @@ public class RelToTrinoConverter extends RelToSqlConverter {
    * For uses outside LinkedIn, just ignore this configuration.
    */
   private Map<String, Boolean> configs = new HashMap<>();
+  private final SqlValidator sqlValidator;
 
   /**
    * Creates a RelToTrinoConverter.
    */
-  public RelToTrinoConverter() {
+  public RelToTrinoConverter(SqlValidator sqlValidator) {
     super(TrinoSqlDialect.INSTANCE);
+    this.sqlValidator = sqlValidator;
   }
 
-  public RelToTrinoConverter(Map<String, Boolean> configs) {
+  public RelToTrinoConverter(Map<String, Boolean> configs, SqlValidator sqlValidator) {
     super(TrinoSqlDialect.INSTANCE);
     checkNotNull(configs);
     this.configs = configs;
+    this.sqlValidator = sqlValidator;
   }
 
   /**
@@ -77,7 +81,9 @@ public class RelToTrinoConverter extends RelToSqlConverter {
    */
   public String convert(RelNode relNode) {
     RelNode rel = convertRel(relNode, configs);
-    return convertToSqlNode(rel).accept(new TrinoSqlRewriter()).toSqlString(TrinoSqlDialect.INSTANCE).toString();
+    SqlNode coralSqlNode = convertToSqlNode(rel);
+    SqlNode trinoSqlNode = coralSqlNode.accept(new CoralSqlNodeToTrinoSqlNodeConverter(sqlValidator, configs));
+    return trinoSqlNode.accept(new TrinoSqlRewriter()).toSqlString(TrinoSqlDialect.INSTANCE).toString();
   }
 
   /**
