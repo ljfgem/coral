@@ -1,5 +1,5 @@
 /**
- * Copyright 2019-2022 LinkedIn Corporation. All rights reserved.
+ * Copyright 2019-2023 LinkedIn Corporation. All rights reserved.
  * Licensed under the BSD-2 Clause license.
  * See LICENSE in the project root for license information.
  */
@@ -24,6 +24,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlShuttle;
 
 import com.linkedin.coral.common.functions.GenericProjectFunction;
+import com.linkedin.coral.common.utils.RelDataTypeToHiveTypeStringConverter;
 
 
 /**
@@ -114,7 +115,8 @@ public class FuzzyUnionSqlRewriter extends SqlShuttle {
   private SqlNode createGenericProject(String columnName, RelDataType expectedType) {
     SqlNode[] genericProjectOperands = new SqlNode[2];
     genericProjectOperands[0] = new SqlIdentifier(ImmutableList.of(tableName, columnName), SqlParserPos.ZERO);
-    genericProjectOperands[1] = SqlLiteral.createCharString(columnName, SqlParserPos.ZERO);
+    genericProjectOperands[1] = SqlLiteral
+        .createCharString(RelDataTypeToHiveTypeStringConverter.convertRelDataType(expectedType), SqlParserPos.ZERO);
     SqlBasicCall genericProjectCall =
         new SqlBasicCall(new GenericProjectFunction(expectedType), genericProjectOperands, SqlParserPos.ZERO);
     SqlNode[] castAsColumnOperands = new SqlNode[2];

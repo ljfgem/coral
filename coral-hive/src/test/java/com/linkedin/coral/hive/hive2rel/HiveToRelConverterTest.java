@@ -1,5 +1,5 @@
 /**
- * Copyright 2017-2022 LinkedIn Corporation. All rights reserved.
+ * Copyright 2017-2023 LinkedIn Corporation. All rights reserved.
  * Licensed under the BSD-2 Clause license.
  * See LICENSE in the project root for license information.
  */
@@ -408,7 +408,7 @@ public class HiveToRelConverterTest {
   public void testSelectArrayElement() {
     final String sql = "SELECT c[0] from complex";
     final String expectedRel =
-        "LogicalProject(EXPR$0=[ITEM($2, 1)])\n" + "  LogicalTableScan(table=[[hive, default, complex]])\n";
+        "LogicalProject(EXPR$0=[ITEM($2, 0)])\n" + "  LogicalTableScan(table=[[hive, default, complex]])\n";
     assertEquals(relToString(sql), expectedRel);
   }
 
@@ -416,14 +416,14 @@ public class HiveToRelConverterTest {
   public void testSelectArrayElemComplex() {
     final String sql = "SELECT split(b, ',')[0] FROM complex";
     final String expected =
-        "LogicalProject(EXPR$0=[ITEM(split($1, ','), 1)])\n" + "  LogicalTableScan(table=[[hive, default, complex]])\n";
+        "LogicalProject(EXPR$0=[ITEM(split($1, ','), 0)])\n" + "  LogicalTableScan(table=[[hive, default, complex]])\n";
     assertEquals(relToString(sql), expected);
   }
 
   @Test
   public void testSelectArrayElemWithFunctionArgument() {
     final String sql = "SELECT c[size(c) - 1] FROM complex";
-    final String expected = "LogicalProject(EXPR$0=[ITEM($2, +(-(CARDINALITY($2), 1), 1))])\n"
+    final String expected = "LogicalProject(EXPR$0=[ITEM($2, -(CARDINALITY($2), 1))])\n"
         + "  LogicalTableScan(table=[[hive, default, complex]])\n";
     assertEquals(relToString(sql), expected);
   }
@@ -450,7 +450,7 @@ public class HiveToRelConverterTest {
     final String sql = "SELECT array(map('abc', 123, 'def', 567),map('pqr', 65, 'xyz', 89))[0]['abc']";
     // indexes are 1-based in relnodes
     final String expected =
-        "LogicalProject(EXPR$0=[ITEM(ITEM(ARRAY(MAP('abc', 123, 'def', 567), MAP('pqr', 65, 'xyz', 89)), 1), 'abc')])\n"
+        "LogicalProject(EXPR$0=[ITEM(ITEM(ARRAY(MAP('abc', 123, 'def', 567), MAP('pqr', 65, 'xyz', 89)), 0), 'abc')])\n"
             + "  LogicalValues(tuples=[[{ 0 }]])\n";
     assertEquals(relToString(sql), expected);
   }

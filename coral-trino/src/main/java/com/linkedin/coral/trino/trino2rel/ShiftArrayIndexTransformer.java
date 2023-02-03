@@ -3,7 +3,7 @@
  * Licensed under the BSD-2 Clause license.
  * See LICENSE in the project root for license information.
  */
-package com.linkedin.coral.transformers;
+package com.linkedin.coral.trino.trino2rel;
 
 import java.math.BigDecimal;
 
@@ -20,7 +20,7 @@ import com.linkedin.coral.common.transformers.SqlCallTransformer;
 
 
 /**
- * Transformer to convert SqlCall from array[i] to array[i+1] to ensure array indexes start at 1.
+ * Transformer to convert SqlCall from array[i] to array[i-1] to ensure array indexes start at 0.
  */
 public class ShiftArrayIndexTransformer extends SqlCallTransformer {
 
@@ -31,7 +31,7 @@ public class ShiftArrayIndexTransformer extends SqlCallTransformer {
   }
 
   @Override
-  public boolean predicate(SqlCall sqlCall) {
+  public boolean condition(SqlCall sqlCall) {
     if (ITEM_OPERATOR.equalsIgnoreCase(sqlCall.getOperator().getName())) {
       final SqlNode columnNode = sqlCall.getOperandList().get(0);
       return getRelDataType(columnNode) instanceof ArraySqlType;
@@ -46,9 +46,9 @@ public class ShiftArrayIndexTransformer extends SqlCallTransformer {
         && getRelDataType(itemNode).getSqlTypeName().equals(SqlTypeName.INTEGER)) {
       final Integer value = ((SqlNumericLiteral) itemNode).getValueAs(Integer.class);
       sqlCall.setOperand(1,
-          SqlNumericLiteral.createExactNumeric(new BigDecimal(value + 1).toString(), itemNode.getParserPosition()));
+          SqlNumericLiteral.createExactNumeric(new BigDecimal(value - 1).toString(), itemNode.getParserPosition()));
     } else {
-      final SqlCall oneBasedIndex = SqlStdOperatorTable.PLUS.createCall(itemNode.getParserPosition(), itemNode,
+      final SqlCall oneBasedIndex = SqlStdOperatorTable.MINUS.createCall(itemNode.getParserPosition(), itemNode,
           SqlNumericLiteral.createExactNumeric("1", SqlParserPos.ZERO));
       sqlCall.setOperand(1, oneBasedIndex);
     }
