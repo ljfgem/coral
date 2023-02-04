@@ -5,6 +5,7 @@
  */
 package com.linkedin.coral.spark;
 
+import java.util.List;
 import java.util.Set;
 
 import org.apache.calcite.sql.SqlCall;
@@ -16,6 +17,7 @@ import com.linkedin.coral.common.calcite.CalciteUtil;
 import com.linkedin.coral.common.transformers.OperatorBasedSqlCallTransformer;
 import com.linkedin.coral.common.transformers.SqlCallTransformers;
 import com.linkedin.coral.spark.containers.SparkUDFInfo;
+import com.linkedin.coral.spark.transformers.AddExplicitAliasTransformer;
 import com.linkedin.coral.spark.transformers.CastToNamedStructTransformer;
 import com.linkedin.coral.spark.transformers.FallBackToHiveUDFTransformer;
 import com.linkedin.coral.spark.transformers.FuzzyUnionGenericProjectTransformer;
@@ -33,7 +35,7 @@ import static com.linkedin.coral.spark.transformers.TransportableUDFTransformer.
 public class CoralToSparkSqlCallConverter extends SqlShuttle {
   private final SqlCallTransformers sqlCallTransformers;
 
-  public CoralToSparkSqlCallConverter(Set<SparkUDFInfo> sparkUDFInfos) {
+  public CoralToSparkSqlCallConverter(Set<SparkUDFInfo> sparkUDFInfos, List<String> aliases) {
     this.sqlCallTransformers = SqlCallTransformers.of(new CastToNamedStructTransformer(),
         new FuzzyUnionGenericProjectTransformer(sparkUDFInfos), new SwapExtractUnionFunctionTransformer(sparkUDFInfos),
         new RemoveRedundantCastInCaseTransformer(),
@@ -157,7 +159,9 @@ public class CoralToSparkSqlCallConverter extends SqlShuttle {
             CalciteUtil.createSqlOperatorOfFunction("size", ReturnTypes.INTEGER), null, null, null),
 
         // Fall back to the original Hive UDF defined in StaticHiveFunctionRegistry after failing to apply transformers above
-        new FallBackToHiveUDFTransformer(sparkUDFInfos));
+        new FallBackToHiveUDFTransformer(sparkUDFInfos),
+
+        new AddExplicitAliasTransformer(aliases));
   }
 
   @Override

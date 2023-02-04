@@ -14,9 +14,7 @@ import org.apache.avro.Schema;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlSelect;
 
 import com.linkedin.coral.com.google.common.collect.ImmutableList;
 import com.linkedin.coral.spark.containers.SparkUDFInfo;
@@ -110,7 +108,7 @@ public class CoralSpark {
     CoralRelToSqlNodeConverter rel2sql = new CoralRelToSqlNodeConverter();
     SqlNode coralSqlNode = rel2sql.convert(sparkRelNode);
     SqlNode sparkSqlNode = coralSqlNode.accept(new CoralSqlNodeToSparkSqlNodeConverter())
-        .accept(new CoralToSparkSqlCallConverter(sparkUDFInfos));
+        .accept(new CoralToSparkSqlCallConverter(sparkUDFInfos, null));
     SqlNode rewrittenSparkSqlNode = sparkSqlNode.accept(new SparkSqlRewriter());
     return rewrittenSparkSqlNode.toSqlString(SparkSqlDialect.INSTANCE).getSql();
   }
@@ -121,15 +119,9 @@ public class CoralSpark {
     // Create temporary objects r and rewritten to make debugging easier
     SqlNode coralSqlNode = rel2sql.convert(sparkRelNode);
     SqlNode sparkSqlNode = coralSqlNode.accept(new CoralSqlNodeToSparkSqlNodeConverter())
-        .accept(new CoralToSparkSqlCallConverter(sparkUDFInfos));
+        .accept(new CoralToSparkSqlCallConverter(sparkUDFInfos, aliases));
 
     SqlNode rewritten = sparkSqlNode.accept(new SparkSqlRewriter());
-    // Use a second pass visit to add explicit alias names,
-    // only do this when it's not a select star case,
-    // since for select star we don't need to add any explicit aliases
-    if (rewritten.getKind() == SqlKind.SELECT && ((SqlSelect) rewritten).getSelectList() != null) {
-      rewritten = rewritten.accept(new AddExplicitAlias(aliases));
-    }
     return rewritten.toSqlString(SparkSqlDialect.INSTANCE).getSql();
   }
 
