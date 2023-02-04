@@ -89,7 +89,7 @@ public class RelToTrinoConverterTest {
     // Array
     {
       String sql = "select acol[10] from tableOne";
-      String expected = "SELECT element_at(\"acol\", 10)\nFROM \"tableOne\"";
+      String expected = "SELECT element_at(\"acol\", 11)\nFROM \"tableOne\"";
       testConversion(sql, expected);
     }
     {

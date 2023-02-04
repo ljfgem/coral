@@ -114,16 +114,16 @@ public class TrinoToRelConverterTest {
                 + "FROM \"default\".\"foo\"\n"
                 + "WHERE NOT ((\"a\" IS NOT NULL OR \"b\" IS NOT NULL) AND \"a\" = \"b\" IS NOT TRUE)"))
         .add(new TrinoToRelTestDataProvider("select x[1] from my_table",
-            "LogicalProject(EXPR$0=[ITEM($0, 1)])\n" + "  LogicalTableScan(table=[[hive, default, my_table]])\n",
+            "LogicalProject(EXPR$0=[ITEM($0, 0)])\n" + "  LogicalTableScan(table=[[hive, default, my_table]])\n",
             "SELECT element_at(\"x\", 1)\n" + "FROM \"default\".\"my_table\""))
         .add(new TrinoToRelTestDataProvider("select y[1][2] from my_table",
-            "LogicalProject(EXPR$0=[ITEM(ITEM($1, 1), 2)])\n"
+            "LogicalProject(EXPR$0=[ITEM(ITEM($1, 0), 1)])\n"
                 + "  LogicalTableScan(table=[[hive, default, my_table]])\n",
             "SELECT element_at(element_at(\"y\", 1), 2)\n" + "FROM \"default\".\"my_table\""))
         .add(new TrinoToRelTestDataProvider("select x[cast(10 * sin(z) as bigint)] from my_table",
-            "LogicalProject(EXPR$0=[ITEM($0, CAST(*(10, SIN($2))):BIGINT)])\n"
+            "LogicalProject(EXPR$0=[ITEM($0, -(CAST(*(10, SIN($2))):BIGINT, 1))])\n"
                 + "  LogicalTableScan(table=[[hive, default, my_table]])\n",
-            "SELECT element_at(\"x\", CAST(10 * SIN(\"z\") AS BIGINT))\n" + "FROM \"default\".\"my_table\""))
+            "SELECT element_at(\"x\", CAST(10 * SIN(\"z\") AS BIGINT) - 1 + 1)\n" + "FROM \"default\".\"my_table\""))
         .add(new TrinoToRelTestDataProvider("select * from unnest(array[1, 2, 3])",
             "LogicalProject(EXPR$0=[$0])\n" + "  HiveUncollect\n" + "    LogicalProject(col=[ARRAY(1, 2, 3)])\n"
                 + "      LogicalValues(tuples=[[{ 0 }]])\n",

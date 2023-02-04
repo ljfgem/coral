@@ -35,6 +35,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -43,8 +44,10 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlMapValueConstructor;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.type.ArraySqlType;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlUserDefinedFunction;
 
 import com.linkedin.coral.com.google.common.base.CaseFormat;
@@ -55,6 +58,7 @@ import com.linkedin.coral.com.google.common.collect.Multimap;
 import com.linkedin.coral.common.functions.FunctionReturnTypes;
 import com.linkedin.coral.common.functions.GenericProjectFunction;
 import com.linkedin.coral.trino.rel2trino.functions.GenericProjectToTrinoConverter;
+import com.linkedin.coral.trino.rel2trino.functions.TrinoElementAtFunction;
 
 import static com.linkedin.coral.trino.rel2trino.CoralTrinoConfigKeys.*;
 import static com.linkedin.coral.trino.rel2trino.UDFMapUtils.createUDF;
@@ -248,6 +252,13 @@ public class Calcite2TrinoUDFConverter {
         }
       }
 
+      if (operatorName.equalsIgnoreCase("item")) {
+        Optional<RexNode> modifiedCall = visitItem(call);
+        if (modifiedCall.isPresent()) {
+          return modifiedCall.get();
+        }
+      }
+
       final UDFTransformer transformer = CalciteTrinoUDFMap.getUDFTransformer(operatorName, call.operands.size());
       if (transformer != null && shouldTransformOperator(operatorName)) {
         return adjustReturnTypeWithCast(rexBuilder,
@@ -260,6 +271,25 @@ public class Calcite2TrinoUDFConverter {
 
       RexCall modifiedCall = adjustInconsistentTypesToEqualityOperator(call);
       return adjustReturnTypeWithCast(rexBuilder, super.visitCall(modifiedCall));
+    }
+
+    // Converts `array[i]` to `element(array, i + 1)`
+    private Optional<RexNode> visitItem(RexCall call) {
+      List<RexNode> convertedOperands = visitList(call.getOperands(), (boolean[]) null);
+      RexNode columnRef = convertedOperands.get(0);
+      RexNode itemRef = convertedOperands.get(1);
+      if (columnRef.getType() instanceof ArraySqlType) {
+        if (itemRef.isA(SqlKind.LITERAL) && itemRef.getType().getSqlTypeName().equals(SqlTypeName.INTEGER)) {
+          Integer val = ((RexLiteral) itemRef).getValueAs(Integer.class);
+          RexLiteral newItemRef = rexBuilder.makeExactLiteral(new BigDecimal(val + 1), itemRef.getType());
+          return Optional.of(rexBuilder.makeCall(TrinoElementAtFunction.INSTANCE, columnRef, newItemRef));
+        } else {
+          RexNode oneBasedIndex =
+              rexBuilder.makeCall(SqlStdOperatorTable.PLUS, itemRef, rexBuilder.makeExactLiteral(BigDecimal.ONE));
+          return Optional.of(rexBuilder.makeCall(TrinoElementAtFunction.INSTANCE, columnRef, oneBasedIndex));
+        }
+      }
+      return Optional.of(rexBuilder.makeCall(TrinoElementAtFunction.INSTANCE, columnRef, itemRef));
     }
 
     private Optional<RexNode> visitConcat(RexCall call) {

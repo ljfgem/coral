@@ -10,22 +10,28 @@ import java.util.Locale;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.util.SqlShuttle;
+import org.apache.calcite.sql.validate.SqlValidator;
+
+import com.linkedin.coral.common.transformers.SqlCallTransformers;
 
 
 /**
  * Rewrites the SqlNode tree to replace Trino SQL operators with Coral IR to obtain a Coral-compatible plan.
  */
 public class Trino2CoralOperatorConverter extends SqlShuttle {
-  public Trino2CoralOperatorConverter() {
+  private final SqlCallTransformers operatorTransformers;
+  public Trino2CoralOperatorConverter(SqlValidator sqlValidator) {
+    operatorTransformers = SqlCallTransformers.of(new ShiftArrayIndexTransformer(sqlValidator));
   }
 
   @Override
-  public SqlNode visit(final SqlCall call) {
+  public SqlNode visit(SqlCall call) {
     final String operatorName = call.getOperator().getName();
 
     final OperatorTransformer transformer = Trino2CoralOperatorTransformerMap
         .getOperatorTransformer(operatorName.toLowerCase(Locale.ROOT), call.operandCount());
 
+    call = operatorTransformers.apply(call);
     if (transformer == null) {
       return super.visit(call);
     }

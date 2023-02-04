@@ -36,13 +36,10 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelRecordType;
 import org.apache.calcite.rex.*;
 import org.apache.calcite.sql.SqlIdentifier;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.type.ArraySqlType;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlUserDefinedFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -200,11 +197,11 @@ class IRRelToSparkRelTransformer {
 
       RexCall updatedCall = (RexCall) super.visitCall(call);
 
-      RexNode convertToNewNode = convertToZeroBasedArrayIndex(updatedCall).orElseGet(
-          () -> convertToNamedStruct(updatedCall).orElseGet(() -> convertFuzzyUnionGenericProject(updatedCall)
+      RexNode convertToNewNode =
+          convertToNamedStruct(updatedCall).orElseGet(() -> convertFuzzyUnionGenericProject(updatedCall)
               .orElseGet(() -> convertDaliUDF(updatedCall).orElseGet(() -> convertBuiltInUDF(updatedCall)
                   .orElseGet(() -> fallbackToHiveUdf(updatedCall).orElseGet(() -> swapExtractUnionFunction(updatedCall)
-                      .orElseGet(() -> removeCastToEnsureCorrectNullability(updatedCall).orElse(updatedCall))))))));
+                      .orElseGet(() -> removeCastToEnsureCorrectNullability(updatedCall).orElse(updatedCall)))))));
 
       return convertToNewNode;
     }
@@ -261,26 +258,6 @@ class IRRelToSparkRelTransformer {
 
       return sparkUDFInfo.map(sparkUDFInfo1 -> rexBuilder.makeCall(
           createUDF(sparkUDFInfo1.getFunctionName(), call.getOperator().getReturnTypeInference()), call.getOperands()));
-    }
-
-    // Coral RelNode Stores array indexes as +1, this fixes the behavior on spark side
-    private Optional<RexNode> convertToZeroBasedArrayIndex(RexCall call) {
-      if (call.getOperator().equals(SqlStdOperatorTable.ITEM)) {
-        RexNode columnRef = call.getOperands().get(0);
-        RexNode itemRef = call.getOperands().get(1);
-        if (columnRef.getType() instanceof ArraySqlType) {
-          if (itemRef.isA(SqlKind.LITERAL) && itemRef.getType().getSqlTypeName().equals(SqlTypeName.INTEGER)) {
-            Integer val = ((RexLiteral) itemRef).getValueAs(Integer.class);
-            RexLiteral newItemRef = rexBuilder.makeExactLiteral(new BigDecimal(val - 1), itemRef.getType());
-            return Optional.of(rexBuilder.makeCall(call.op, columnRef, newItemRef));
-          } else {
-            RexNode zeroBasedIndex =
-                rexBuilder.makeCall(SqlStdOperatorTable.MINUS, itemRef, rexBuilder.makeExactLiteral(BigDecimal.ONE));
-            return Optional.of(rexBuilder.makeCall(call.op, columnRef, zeroBasedIndex));
-          }
-        }
-      }
-      return Optional.empty();
     }
 
     // Convert CAST(ROW: RECORD_TYPE) to named_struct
