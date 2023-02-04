@@ -379,18 +379,7 @@ class IRRelToSparkRelTransformer {
      *  with regard to the Spark analyzer schema, it should make Coral compatible with Spark.
      */
     private Optional<RexNode> removeCastToEnsureCorrectNullability(RexCall call) {
-      if (call.getOperator().equals(SqlStdOperatorTable.CAST)) {
-        if (RexUtil.isNullLiteral(call, true)) {
-          return Optional.of(rexBuilder.makeNullLiteral(call.getType()));
-        }
-        RelDataType castType = call.getType();
-        RelDataType originalType = call.getOperands().get(0).getType();
-        if (castType.isNullable() && !originalType.isNullable()
-            && rexBuilder.getTypeFactory().createTypeWithNullability(originalType, true).equals(castType)) {
-          return Optional.of(rexBuilder.copy(call.getOperands().get(0)));
-        }
-      }
-      return Optional.empty();
+      return Optional.of(call);
     }
 
     private static SqlOperator createUDF(String udfName, SqlReturnTypeInference typeInference) {
