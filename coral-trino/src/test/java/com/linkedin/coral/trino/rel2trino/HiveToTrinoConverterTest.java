@@ -47,19 +47,6 @@ public class HiveToTrinoConverterTest {
     assertEquals(expandedSql, expectedSql);
   }
 
-  //  @Test
-  //  public void testViewsTmp() {
-  //    String database = "test";
-  //    String view = "aastha_test_view";
-  //    String expectedSql =
-  //        "SELECT \"a\", CAST(row(\"b\".\"b1\", cast(row(\"b\".\"b2\".\"b3\", cast(row(\"b\".\"b2\".\"b4\".\"b5\") as row(\"b5\" varchar))) as row(\"b3\" varchar, \"b4\" row(\"b5\" varchar)))) as row(\"b1\" varchar, \"b2\" row(\"b3\" varchar, \"b4\" row(\"b5\" varchar)))) AS \"b\"\n"
-  //            + "FROM \"test\".\"tablel\"\n" + "UNION ALL\n" + "SELECT *\n" + "FROM \"test\".\"tablem\"";
-  //    RelNode relNode = TestUtils.getHiveToRelConverter().convertView(database, view);
-  //    RelToTrinoConverter relToTrinoConverter = TestUtils.getRelToTrinoConverter();
-  //    String expandedSql = relToTrinoConverter.convert(relNode);
-  //    assertEquals(expandedSql, expectedSql);
-  //  }
-
   @DataProvider(name = "viewTestCases")
   public Object[][] viewTestCasesProvider() {
     return new Object[][] {
@@ -157,7 +144,7 @@ public class HiveToTrinoConverterTest {
             + "\"if\"(\"REGEXP_LIKE\"('rocks', '^[^\\\"]*$'), CAST(\"json_extract\"(\"$cor0\".\"b\".\"b1\", '$[\"' || 'rocks' || '\"]') AS VARCHAR(65535)), NULL) AS \"f\"\n"
             + "FROM (VALUES  (0)) AS \"t\" (\"ZERO\")) AS \"t0\"" },
 
-        { "test", "get_json_object_view", "SELECT \"json_extract\"(\"b\".\"b1\", '$.name')\nFROM \"test\".\"tablea\"" },
+        { "test", "get_json_object_view", "SELECT \"json_extract\"(\"tablea\".\"b\".\"b1\", '$.name')\nFROM \"test\".\"tablea\"" },
 
         { "test", "view_from_utc_timestamp", "SELECT "
             + "CAST(\"at_timezone\"(\"from_unixtime_nanos\"(CAST(\"a_tinyint\" AS BIGINT) * 1000000), \"$canonicalize_hive_timezone_id\"('America/Los_Angeles')) AS TIMESTAMP(3)), "
@@ -545,8 +532,8 @@ public class HiveToTrinoConverterTest {
     //
     // However, `struct_col` column doesn't exist in test.tableT
 
-    String targetSql = "SELECT \"struct_col\" AS \"structCol\"\n" + "FROM (SELECT \"structcol\" AS \"struct_col\"\n"
-        + "FROM \"test\".\"tables\"\n" + "UNION ALL\n"
+    String targetSql = "SELECT \"t1\".\"struct_col\" AS \"structCol\"\n"
+        + "FROM (SELECT \"tables\".\"structcol\" AS \"struct_col\"\n" + "FROM \"test\".\"tables\"\n" + "UNION ALL\n"
         + "SELECT CAST(row(\"structcol\".\"a\") as row(\"a\" integer)) AS \"struct_col\"\n"
         + "FROM \"test\".\"tablet\") AS \"t1\"";
     String expandedSql = relToTrinoConverter.convert(relNode);
