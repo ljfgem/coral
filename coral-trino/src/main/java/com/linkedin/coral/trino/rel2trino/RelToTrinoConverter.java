@@ -31,10 +31,10 @@ import org.apache.calcite.sql.*;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.util.Util;
 
 import com.linkedin.coral.com.google.common.collect.ImmutableList;
-import com.linkedin.coral.common.HiveMetastoreClient;
 import com.linkedin.coral.common.functions.FunctionFieldReferenceOperator;
 import com.linkedin.coral.hive.hive2rel.rel.HiveUncollect;
 import com.linkedin.coral.trino.rel2trino.functions.TrinoArrayTransformFunction;
@@ -62,7 +62,7 @@ public class RelToTrinoConverter extends RelToSqlConverter {
    * For uses outside LinkedIn, just ignore this configuration.
    */
   private Map<String, Boolean> configs = new HashMap<>();
-  private HiveMetastoreClient _hiveMetastoreClient;
+  private SqlValidator sqlValidator;
 
   @Deprecated
   public RelToTrinoConverter() {
@@ -76,16 +76,16 @@ public class RelToTrinoConverter extends RelToSqlConverter {
     this.configs = configs;
   }
 
-  public RelToTrinoConverter(HiveMetastoreClient mscClient) {
+  public RelToTrinoConverter(SqlValidator sqlValidator) {
     super(TrinoSqlDialect.INSTANCE);
-    _hiveMetastoreClient = mscClient;
+    this.sqlValidator = sqlValidator;
   }
 
-  public RelToTrinoConverter(HiveMetastoreClient mscClient, Map<String, Boolean> configs) {
+  public RelToTrinoConverter(SqlValidator sqlValidator, Map<String, Boolean> configs) {
     super(TrinoSqlDialect.INSTANCE);
     checkNotNull(configs);
     this.configs = configs;
-    _hiveMetastoreClient = mscClient;
+    this.sqlValidator = sqlValidator;
   }
 
   /**
@@ -96,7 +96,7 @@ public class RelToTrinoConverter extends RelToSqlConverter {
   public String convert(RelNode relNode) {
     RelNode rel = convertRel(relNode, configs);
     SqlNode sqlNode = convertToSqlNode(rel);
-    SqlNode transformedSqlNode = sqlNode.accept(new SqlNodeConverter(_hiveMetastoreClient));
+    SqlNode transformedSqlNode = sqlNode.accept(new SqlNodeConverter(sqlValidator));
 
     SqlNode sqlNodeWithUDFOperatorConverted = transformedSqlNode.accept(new CoralToTrinoSqlCallConverter(configs));
     return sqlNodeWithUDFOperatorConverted.accept(new TrinoSqlRewriter()).toSqlString(TrinoSqlDialect.INSTANCE)
@@ -332,11 +332,7 @@ public class RelToTrinoConverter extends RelToSqlConverter {
             RelDataTypeField field = fields.get(ordinal);
             final SqlNode mappedSqlNode = ordinalMap.get(field.getName().toLowerCase(Locale.ROOT));
             if (mappedSqlNode != null) {
-              return mappedSqlNode;
-            }
-            // For fields with data type struct, append the table alias to ensure proper type derivation
-            if (field.getType().isStruct()) {
-              return new SqlIdentifier(ImmutableList.of(alias.getKey(), field.getName()), POS);
+              return ensureAliasedNode(alias.getKey(), mappedSqlNode);
             }
             return new SqlIdentifier(
                 !qualified ? ImmutableList.of(field.getName()) : ImmutableList.of(alias.getKey(), field.getName()),

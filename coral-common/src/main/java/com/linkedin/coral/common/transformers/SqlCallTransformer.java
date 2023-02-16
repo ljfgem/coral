@@ -5,9 +5,11 @@
  */
 package com.linkedin.coral.common.transformers;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
 
@@ -22,6 +24,7 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.validate.SqlUserDefinedFunction;
 import org.apache.calcite.sql.validate.SqlValidator;
+import org.apache.calcite.sql.validate.SqlValidatorImpl;
 
 
 /**
@@ -101,6 +104,9 @@ public abstract class SqlCallTransformer {
     if (sqlValidator == null) {
       throw new RuntimeException("SqlValidator does not exist to derive the RelDataType for SqlNode " + sqlNode);
     }
+    if (sqlValidator.getValidatedNodeTypeIfKnown(sqlNode) != null) {
+      return sqlValidator.getValidatedNodeTypeIfKnown(sqlNode);
+    }
     for (int i = topSelectNodes.size() - 1; i >= 0; --i) {
       final SqlSelect topSelectNode = topSelectNodes.get(i);
       final SqlSelect dummySqlSelect = new SqlSelect(topSelectNode.getParserPosition(), null, SqlNodeList.of(sqlNode),
@@ -121,6 +127,20 @@ public abstract class SqlCallTransformer {
       sqlValidator.validate(dummySqlSelect);
       return sqlValidator.getValidatedNodeType(sqlNode);
     } catch (Exception ignored) {
+
+    }
+
+    try {
+      final Field nodeToTypeMap = SqlValidatorImpl.class.getDeclaredField("nodeToTypeMap");
+      nodeToTypeMap.setAccessible(true);
+      final Map<SqlNode, RelDataType> nodeRelDataTypeMap = (Map<SqlNode, RelDataType>) nodeToTypeMap.get(sqlValidator);
+      for (SqlNode node : nodeRelDataTypeMap.keySet()) {
+        if (node instanceof SqlIdentifier && sqlNode instanceof SqlIdentifier
+            && ((SqlIdentifier) node).names.containsAll(((SqlIdentifier) sqlNode).names)) {
+          return nodeRelDataTypeMap.get(node);
+        }
+      }
+    } catch (Throwable ignored) {
 
     }
 
