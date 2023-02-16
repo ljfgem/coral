@@ -9,13 +9,16 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
@@ -135,8 +138,14 @@ public abstract class SqlCallTransformer {
       nodeToTypeMap.setAccessible(true);
       final Map<SqlNode, RelDataType> nodeRelDataTypeMap = (Map<SqlNode, RelDataType>) nodeToTypeMap.get(sqlValidator);
       for (SqlNode node : nodeRelDataTypeMap.keySet()) {
+        if (node instanceof SqlLiteral && sqlNode instanceof SqlLiteral
+            && ((SqlLiteral) node).getTypeName() == ((SqlLiteral) sqlNode).getTypeName()) {
+          return nodeRelDataTypeMap.get(node);
+        }
         if (node instanceof SqlIdentifier && sqlNode instanceof SqlIdentifier
-            && ((SqlIdentifier) node).names.containsAll(((SqlIdentifier) sqlNode).names)) {
+            && ((SqlIdentifier) node).names.stream().map(s -> s.toLowerCase(Locale.ROOT)).collect(Collectors.toSet())
+                .containsAll(((SqlIdentifier) sqlNode).names.stream().map(s -> s.toLowerCase(Locale.ROOT))
+                    .collect(Collectors.toSet()))) {
           return nodeRelDataTypeMap.get(node);
         }
       }
