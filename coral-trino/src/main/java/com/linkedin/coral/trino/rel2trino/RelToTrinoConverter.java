@@ -37,6 +37,7 @@ import org.apache.calcite.util.Util;
 import com.linkedin.coral.com.google.common.collect.ImmutableList;
 import com.linkedin.coral.common.functions.FunctionFieldReferenceOperator;
 import com.linkedin.coral.hive.hive2rel.rel.HiveUncollect;
+import com.linkedin.coral.transformers.CoralRelToSqlNodeConverter;
 import com.linkedin.coral.trino.rel2trino.functions.TrinoArrayTransformFunction;
 
 import static com.google.common.base.Preconditions.*;
@@ -94,6 +95,8 @@ public class RelToTrinoConverter extends RelToSqlConverter {
    * @return SQL string
    */
   public String convert(RelNode relNode) {
+    // Temp: validate converted SqlNode to find regression reasons
+    sqlValidator.validate(new CoralRelToSqlNodeConverter().convert(relNode));
     RelNode rel = convertRel(relNode, configs);
     SqlNode sqlNode = convertToSqlNode(rel);
     SqlNode transformedSqlNode = sqlNode.accept(new SqlNodeConverter(sqlValidator));
