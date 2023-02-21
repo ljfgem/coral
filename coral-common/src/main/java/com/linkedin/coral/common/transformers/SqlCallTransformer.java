@@ -6,6 +6,7 @@
 package com.linkedin.coral.common.transformers;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -20,6 +21,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
+import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.sql.validate.SqlUserDefinedFunction;
 import org.apache.calcite.sql.validate.SqlValidator;
 
@@ -55,16 +57,7 @@ public abstract class SqlCallTransformer {
    */
   public SqlCall apply(SqlCall sqlCall) {
     if (sqlCall instanceof SqlSelect) {
-      // Updates selectList to correctly handle t.* type SqlSelect sqlNodes for accurate data type derivation
-      if (((SqlSelect) sqlCall).getSelectList() == null) {
-        List<String> names = new ArrayList<>();
-        names.add("*");
-        List<SqlParserPos> sqlParserPos = Collections.nCopies(names.size(), SqlParserPos.ZERO);
-        SqlNode star = SqlIdentifier.star(names, SqlParserPos.ZERO, sqlParserPos);
-        ((SqlSelect) sqlCall).setSelectList(SqlNodeList.of(star));
-      }
-
-      this.topSelectNodes.add((SqlSelect) sqlCall);
+      this.topSelectNodes.add((SqlSelect) sqlCall.accept(new SqlSelectModifier()));
     }
     if (condition(sqlCall)) {
       return transform(sqlCall);
@@ -98,6 +91,7 @@ public abstract class SqlCallTransformer {
    * The implementation might be updated to not rely on this assumption for determining the datatype of the child SqlNode.
    */
   protected RelDataType getRelDataType(SqlNode sqlNode) {
+    StringBuilder stacktrace = new StringBuilder();
     if (sqlValidator == null) {
       throw new RuntimeException("SqlValidator does not exist to derive the RelDataType for SqlNode " + sqlNode);
     }
@@ -108,7 +102,10 @@ public abstract class SqlCallTransformer {
       try {
         sqlValidator.validate(dummySqlSelect);
         return sqlValidator.getValidatedNodeType(dummySqlSelect).getFieldList().get(0).getType();
-      } catch (Throwable ignored) {
+      } catch (Throwable throwable) {
+        if (stacktrace.length() == 0) {
+          stacktrace.append(throwable.getMessage()).append("\n").append(Arrays.toString(throwable.getStackTrace()));
+        }
       }
     }
     // Additional attempt to derive data type of the input sqlNode by validating the topSelectNode, especially in cases
@@ -120,11 +117,10 @@ public abstract class SqlCallTransformer {
           SqlNodeList.of(sqlNode), topSelectNodes.get(0), null, null, null, null, null, null, null);
       sqlValidator.validate(dummySqlSelect);
       return sqlValidator.getValidatedNodeType(sqlNode);
-    } catch (Exception ignored) {
-
+    } catch (Throwable ignored) {
     }
 
-    throw new RuntimeException("Failed to derive the RelDataType for SqlNode " + sqlNode);
+    throw new RuntimeException(stacktrace.toString());
   }
 
   /**
@@ -133,5 +129,22 @@ public abstract class SqlCallTransformer {
   protected static SqlOperator createSqlOperator(String functionName, SqlReturnTypeInference typeInference) {
     SqlIdentifier sqlIdentifier = new SqlIdentifier(ImmutableList.of(functionName), SqlParserPos.ZERO);
     return new SqlUserDefinedFunction(sqlIdentifier, typeInference, null, null, null, null);
+  }
+
+  static class SqlSelectModifier extends SqlShuttle {
+    @Override
+    public SqlNode visit(SqlCall sqlCall) {
+      if (sqlCall instanceof SqlSelect) {
+        // Updates selectList to correctly handle t.* type SqlSelect sqlNodes for accurate data type derivation
+        if (((SqlSelect) sqlCall).getSelectList() == null) {
+          List<String> names = new ArrayList<>();
+          names.add("*");
+          List<SqlParserPos> sqlParserPos = Collections.nCopies(names.size(), SqlParserPos.ZERO);
+          SqlNode star = SqlIdentifier.star(names, SqlParserPos.ZERO, sqlParserPos);
+          ((SqlSelect) sqlCall).setSelectList(SqlNodeList.of(star));
+        }
+      }
+      return super.visit(sqlCall);
+    }
   }
 }
