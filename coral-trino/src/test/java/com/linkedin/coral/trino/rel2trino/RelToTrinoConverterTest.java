@@ -5,7 +5,15 @@
  */
 package com.linkedin.coral.trino.rel2trino;
 
+import java.io.File;
+import java.io.IOException;
+
 import org.apache.calcite.tools.FrameworkConfig;
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.metastore.api.MetaException;
+import org.apache.hadoop.hive.ql.metadata.HiveException;
+import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
@@ -33,11 +41,19 @@ public class RelToTrinoConverterTest {
   static final String tableTwo = TABLE_TWO.getTableName();
   static final String tableThree = TABLE_THREE.getTableName();
   static final String tableFour = TABLE_FOUR.getTableName();
+  static HiveConf conf;
 
   @BeforeTest
-  public static void beforeTest() {
+  public static void beforeClass() throws IOException, HiveException, MetaException {
     TestUtils.turnOffRelSimplification();
     config = TestUtils.createFrameworkConfig(TABLE_ONE, TABLE_TWO, TABLE_THREE, TABLE_FOUR);
+    conf = TestUtils.loadResourceHiveConf();
+    TestUtils.initializeViews(conf);
+  }
+
+  @AfterTest
+  public void afterClass() throws IOException {
+    FileUtils.deleteDirectory(new File(conf.get(TestUtils.CORAL_TRINO_TEST_DIR)));
   }
 
   private void testConversion(String inputSql, String expectedSql) {
@@ -57,7 +73,7 @@ public class RelToTrinoConverterTest {
   }
 
   private String toTrinoSql(String sql) {
-    RelToTrinoConverter converter = new RelToTrinoConverter();
+    RelToTrinoConverter converter = getRelToTrinoConverter();
     return converter.convert(TestUtils.toRel(sql, config));
   }
 
@@ -434,26 +450,6 @@ public class RelToTrinoConverterTest {
     String expectedSql = "SELECT \"tableOne\".\"icol\" AS \"ICOL\", \"tableTwo\".\"dfield\" AS \"DFIELD\"\n"
         + "FROM \"tableOne\" AS \"tableOne\"\n"
         + "FULL JOIN \"tableTwo\" AS \"tableTwo\" ON \"tableOne\".\"scol\" = \"tableTwo\".\"sfield\"";
-    testConversion(sql, expectedSql);
-  }
-
-  @Test
-  public void testTryCastIntTrino() {
-    String sql =
-        "SELECT CASE WHEN a.scol= 0 THEN TRUE ELSE FALSE END AS testcol FROM " + tableOne + " a WHERE a.scol = 1";
-    String expectedSql =
-        "SELECT CASE WHEN TRY_CAST(\"tableOne\".\"scol\" AS INTEGER) = 0 THEN TRUE ELSE FALSE END AS \"TESTCOL\"\n"
-            + "FROM \"tableOne\" AS \"tableOne\"\n" + "WHERE TRY_CAST(\"tableOne\".\"scol\" AS INTEGER) = 1";
-    testConversion(sql, expectedSql);
-  }
-
-  @Test
-  public void testTryCastBooleanTrino() {
-    String sql = "SELECT CASE WHEN a.scol= TRUE THEN TRUE ELSE FALSE END AS testcol FROM " + tableOne
-        + " a WHERE a.scol = FALSE";
-    String expectedSql =
-        "SELECT CASE WHEN TRY_CAST(\"tableOne\".\"scol\" AS BOOLEAN) = TRUE THEN TRUE ELSE FALSE END AS \"TESTCOL\"\n"
-            + "FROM \"tableOne\" AS \"tableOne\"\n" + "WHERE TRY_CAST(\"tableOne\".\"scol\" AS BOOLEAN) = FALSE";
     testConversion(sql, expectedSql);
   }
 

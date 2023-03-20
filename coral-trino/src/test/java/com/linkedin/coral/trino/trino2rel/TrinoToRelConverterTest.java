@@ -250,7 +250,7 @@ public class TrinoToRelConverterTest {
     RelNode relNode = trinoToRelConverter.convertSql(trinoSql);
     assertEquals(expectedRelString, relToStr(relNode));
 
-    RelToTrinoConverter relToTrinoConverter = new RelToTrinoConverter();
+    RelToTrinoConverter relToTrinoConverter = getRelToTrinoConverter();
     // Convert rel node back to Sql
     String expandedSql = relToTrinoConverter.convert(relNode);
     assertEquals(expectedSql, expandedSql);

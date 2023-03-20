@@ -14,6 +14,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.util.SqlShuttle;
+import org.apache.calcite.sql.validate.SqlValidator;
 
 import com.linkedin.coral.common.functions.Function;
 import com.linkedin.coral.common.transformers.JsonTransformSqlCallTransformer;
@@ -24,6 +25,7 @@ import com.linkedin.coral.hive.hive2rel.functions.StaticHiveFunctionRegistry;
 import com.linkedin.coral.trino.rel2trino.functions.TrinoElementAtFunction;
 import com.linkedin.coral.trino.rel2trino.transformers.CoralRegistryOperatorRenameSqlCallTransformer;
 import com.linkedin.coral.trino.rel2trino.transformers.GenericCoralRegistryOperatorRenameSqlCallTransformer;
+import com.linkedin.coral.trino.rel2trino.transformers.RelationalOperatorTransformer;
 import com.linkedin.coral.trino.rel2trino.transformers.ToDateOperatorTransformer;
 
 import static com.linkedin.coral.trino.rel2trino.CoralTrinoConfigKeys.*;
@@ -38,7 +40,7 @@ public class CoralToTrinoSqlCallConverter extends SqlShuttle {
   private static final StaticHiveFunctionRegistry HIVE_FUNCTION_REGISTRY = new StaticHiveFunctionRegistry();
   private final SqlCallTransformers sqlCallTransformers;
 
-  public CoralToTrinoSqlCallConverter(Map<String, Boolean> configs) {
+  public CoralToTrinoSqlCallConverter(SqlValidator sqlValidator, Map<String, Boolean> configs) {
     this.sqlCallTransformers = SqlCallTransformers.of(
         // conditional functions
         new CoralRegistryOperatorRenameSqlCallTransformer("nvl", 2, "coalesce"),
@@ -108,7 +110,10 @@ public class CoralToTrinoSqlCallConverter extends SqlShuttle {
             "com.linkedin.stdudfs.urnextractor.hive.UrnExtractorFunctionWrapper", 1, "urn_extractor"),
         new CoralRegistryOperatorRenameSqlCallTransformer(
             "com.linkedin.stdudfs.hive.daliudfs.UrnExtractorFunctionWrapper", 1, "urn_extractor"),
-        new GenericCoralRegistryOperatorRenameSqlCallTransformer());
+        new GenericCoralRegistryOperatorRenameSqlCallTransformer(),
+
+        // transformers that need type derivations
+        new RelationalOperatorTransformer(sqlValidator));
   }
 
   private SqlOperator hiveToCoralSqlOperator(String functionName) {

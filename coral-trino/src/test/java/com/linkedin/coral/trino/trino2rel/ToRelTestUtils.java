@@ -21,6 +21,7 @@ import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.SessionState;
 
 import com.linkedin.coral.common.HiveMscAdapter;
+import com.linkedin.coral.trino.rel2trino.RelToTrinoConverter;
 
 
 public class ToRelTestUtils {
@@ -70,5 +71,9 @@ public class ToRelTestUtils {
     hiveConf.set("_hive.hdfs.session.path", "/tmp/coral/trino");
     hiveConf.set("_hive.local.session.path", "/tmp/coral/trino");
     return hiveConf;
+  }
+
+  public static RelToTrinoConverter getRelToTrinoConverter() {
+    return new RelToTrinoConverter(hiveMetastoreClient);
   }
 }

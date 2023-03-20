@@ -6,6 +6,7 @@
 package com.linkedin.coral.common.transformers;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
@@ -19,6 +20,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
+import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.sql.validate.SqlUserDefinedFunction;
 import org.apache.calcite.sql.validate.SqlValidator;
 
@@ -93,12 +95,17 @@ public abstract class SqlCallTransformer {
     }
     for (int i = topSelectNodes.size() - 1; i >= 0; --i) {
       final SqlSelect topSelectNode = topSelectNodes.get(i);
+      SqlNode fromForDummySelect = topSelectNode.getFrom();
+      if (fromForDummySelect != null) {
+        fromForDummySelect = fromForDummySelect.accept(new SqlSelectModifier());
+      }
       final SqlSelect dummySqlSelect = new SqlSelect(topSelectNode.getParserPosition(), null, SqlNodeList.of(sqlNode),
-          topSelectNode.getFrom(), null, null, null, null, null, null, null);
+          fromForDummySelect, null, null, null, null, null, null, null);
       try {
         sqlValidator.validate(dummySqlSelect);
         return sqlValidator.getValidatedNodeType(dummySqlSelect).getFieldList().get(0).getType();
-      } catch (Throwable ignored) {
+      } catch (Throwable t) {
+        t.printStackTrace();
       }
     }
     throw new RuntimeException("Failed to derive the RelDataType for SqlNode " + sqlNode);
@@ -110,5 +117,22 @@ public abstract class SqlCallTransformer {
   protected static SqlOperator createSqlOperator(String functionName, SqlReturnTypeInference typeInference) {
     SqlIdentifier sqlIdentifier = new SqlIdentifier(ImmutableList.of(functionName), SqlParserPos.ZERO);
     return new SqlUserDefinedFunction(sqlIdentifier, typeInference, null, null, null, null);
+  }
+
+  static class SqlSelectModifier extends SqlShuttle {
+    @Override
+    public SqlNode visit(SqlCall sqlCall) {
+      if (sqlCall instanceof SqlSelect) {
+        // Update selectList to correctly handle `SELECT * FROM` sqlNodes for accurate data type derivation
+        if (((SqlSelect) sqlCall).getSelectList() == null) {
+          List<String> names = new ArrayList<>();
+          names.add("*");
+          List<SqlParserPos> sqlParserPos = Collections.nCopies(names.size(), SqlParserPos.ZERO);
+          SqlNode star = SqlIdentifier.star(names, SqlParserPos.ZERO, sqlParserPos);
+          ((SqlSelect) sqlCall).setSelectList(SqlNodeList.of(star));
+        }
+      }
+      return super.visit(sqlCall);
+    }
   }
 }
