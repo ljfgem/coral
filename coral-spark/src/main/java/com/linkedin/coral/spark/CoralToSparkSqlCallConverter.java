@@ -11,14 +11,18 @@ import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.util.SqlShuttle;
+import org.apache.calcite.sql.validate.SqlValidator;
 
+import com.linkedin.coral.common.HiveMetastoreClient;
 import com.linkedin.coral.common.transformers.OperatorRenameSqlCallTransformer;
 import com.linkedin.coral.common.transformers.SqlCallTransformers;
+import com.linkedin.coral.hive.hive2rel.HiveToRelConverter;
 import com.linkedin.coral.spark.containers.SparkUDFInfo;
 import com.linkedin.coral.spark.transformers.CastToNamedStructTransformer;
 import com.linkedin.coral.spark.transformers.ExtractUnionFunctionTransformer;
 import com.linkedin.coral.spark.transformers.FallBackToLinkedInHiveUDFTransformer;
 import com.linkedin.coral.spark.transformers.FuzzyUnionGenericProjectTransformer;
+import com.linkedin.coral.spark.transformers.ShiftArrayIndexTransformer;
 import com.linkedin.coral.spark.transformers.TransportUDFTransformer;
 
 import static com.linkedin.coral.spark.transformers.TransportUDFTransformer.*;
@@ -35,8 +39,9 @@ import static com.linkedin.coral.spark.transformers.TransportUDFTransformer.*;
 public class CoralToSparkSqlCallConverter extends SqlShuttle {
   private final SqlCallTransformers sqlCallTransformers;
 
-  public CoralToSparkSqlCallConverter(Set<SparkUDFInfo> sparkUDFInfos) {
-    this.sqlCallTransformers = SqlCallTransformers.of(
+  public CoralToSparkSqlCallConverter(HiveMetastoreClient hiveMetastoreClient, Set<SparkUDFInfo> sparkUDFInfos) {
+    final SqlValidator sqlValidator = new HiveToRelConverter(hiveMetastoreClient).getSqlValidator();
+    this.sqlCallTransformers = SqlCallTransformers.of(new ShiftArrayIndexTransformer(sqlValidator),
         // Transport UDFs
         new TransportUDFTransformer("com.linkedin.dali.udf.date.hive.DateFormatToEpoch",
             "com.linkedin.stdudfs.daliudfs.spark.DateFormatToEpoch", DALI_UDFS_IVY_URL_SPARK_2_11,

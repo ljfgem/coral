@@ -5,6 +5,7 @@
  */
 package com.linkedin.coral.spark;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -18,7 +19,7 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlSelect;
 
 import com.linkedin.coral.com.google.common.collect.ImmutableList;
-import com.linkedin.coral.spark.containers.SparkRelInfo;
+import com.linkedin.coral.common.HiveMetastoreClient;
 import com.linkedin.coral.spark.containers.SparkUDFInfo;
 import com.linkedin.coral.spark.dialect.SparkSqlDialect;
 import com.linkedin.coral.transformers.CoralRelToSqlNodeConverter;
@@ -63,12 +64,10 @@ public class CoralSpark {
    *
    * @return [[CoralSparkInfo]]
    */
-  public static CoralSpark create(RelNode irRelNode) {
-    SparkRelInfo sparkRelInfo = IRRelToSparkRelTransformer.transform(irRelNode);
-    Set<SparkUDFInfo> sparkUDFInfos = sparkRelInfo.getSparkUDFInfos();
-    RelNode sparkRelNode = sparkRelInfo.getSparkRelNode();
-    String sparkSQL = constructSparkSQL(sparkRelNode, sparkUDFInfos);
-    List<String> baseTables = constructBaseTables(sparkRelNode);
+  public static CoralSpark create(HiveMetastoreClient hiveMetastoreClient, RelNode irRelNode) {
+    Set<SparkUDFInfo> sparkUDFInfos = new HashSet<>();
+    String sparkSQL = constructSparkSQL(hiveMetastoreClient, irRelNode, sparkUDFInfos);
+    List<String> baseTables = constructBaseTables(irRelNode);
     return new CoralSpark(baseTables, ImmutableList.copyOf(sparkUDFInfos), sparkSQL);
   }
 
@@ -81,17 +80,16 @@ public class CoralSpark {
    * @param schema Coral schema that is represented by an Avro schema
    * @return [[CoralSparkInfo]]
    */
-  public static CoralSpark create(RelNode irRelNode, Schema schema) {
+  public static CoralSpark create(HiveMetastoreClient hiveMetastoreClient, RelNode irRelNode, Schema schema) {
     List<String> aliases = schema.getFields().stream().map(Schema.Field::name).collect(Collectors.toList());
-    return createWithAlias(irRelNode, aliases);
+    return createWithAlias(hiveMetastoreClient, irRelNode, aliases);
   }
 
-  private static CoralSpark createWithAlias(RelNode irRelNode, List<String> aliases) {
-    SparkRelInfo sparkRelInfo = IRRelToSparkRelTransformer.transform(irRelNode);
-    Set<SparkUDFInfo> sparkUDFInfos = sparkRelInfo.getSparkUDFInfos();
-    RelNode sparkRelNode = sparkRelInfo.getSparkRelNode();
-    String sparkSQL = constructSparkSQLWithExplicitAlias(sparkRelNode, aliases, sparkUDFInfos);
-    List<String> baseTables = constructBaseTables(sparkRelNode);
+  private static CoralSpark createWithAlias(HiveMetastoreClient hiveMetastoreClient, RelNode irRelNode,
+      List<String> aliases) {
+    Set<SparkUDFInfo> sparkUDFInfos = new HashSet<>();
+    String sparkSQL = constructSparkSQLWithExplicitAlias(hiveMetastoreClient, irRelNode, aliases, sparkUDFInfos);
+    List<String> baseTables = constructBaseTables(irRelNode);
     return new CoralSpark(baseTables, ImmutableList.copyOf(sparkUDFInfos), sparkSQL);
   }
 
@@ -108,24 +106,26 @@ public class CoralSpark {
    * @param sparkRelNode A Spark compatible RelNode
    *
    * @param sparkUDFInfos A set of Spark UDF information objects
+   * @param hiveMetastoreClient
    * @return SQL String in Spark SQL dialect which is 'completely expanded'
    */
-  private static String constructSparkSQL(RelNode sparkRelNode, Set<SparkUDFInfo> sparkUDFInfos) {
+  private static String constructSparkSQL(HiveMetastoreClient hiveMetastoreClient, RelNode sparkRelNode,
+      Set<SparkUDFInfo> sparkUDFInfos) {
     CoralRelToSqlNodeConverter rel2sql = new CoralRelToSqlNodeConverter();
     SqlNode coralSqlNode = rel2sql.convert(sparkRelNode);
     SqlNode sparkSqlNode = coralSqlNode.accept(new CoralSqlNodeToSparkSqlNodeConverter())
-        .accept(new CoralToSparkSqlCallConverter(sparkUDFInfos));
+        .accept(new CoralToSparkSqlCallConverter(hiveMetastoreClient, sparkUDFInfos));
     SqlNode rewrittenSparkSqlNode = sparkSqlNode.accept(new SparkSqlRewriter());
     return rewrittenSparkSqlNode.toSqlString(SparkSqlDialect.INSTANCE).getSql();
   }
 
-  private static String constructSparkSQLWithExplicitAlias(RelNode sparkRelNode, List<String> aliases,
-      Set<SparkUDFInfo> sparkUDFInfos) {
+  private static String constructSparkSQLWithExplicitAlias(HiveMetastoreClient hiveMetastoreClient,
+      RelNode sparkRelNode, List<String> aliases, Set<SparkUDFInfo> sparkUDFInfos) {
     CoralRelToSqlNodeConverter rel2sql = new CoralRelToSqlNodeConverter();
     // Create temporary objects r and rewritten to make debugging easier
     SqlNode coralSqlNode = rel2sql.convert(sparkRelNode);
     SqlNode sparkSqlNode = coralSqlNode.accept(new CoralSqlNodeToSparkSqlNodeConverter())
-        .accept(new CoralToSparkSqlCallConverter(sparkUDFInfos));
+        .accept(new CoralToSparkSqlCallConverter(hiveMetastoreClient, sparkUDFInfos));
 
     SqlNode rewritten = sparkSqlNode.accept(new SparkSqlRewriter());
     // Use a second pass visit to add explicit alias names,
