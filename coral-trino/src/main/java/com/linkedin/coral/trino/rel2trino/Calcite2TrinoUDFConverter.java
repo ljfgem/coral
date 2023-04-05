@@ -45,7 +45,6 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.validate.SqlUserDefinedFunction;
 
 import com.linkedin.coral.com.google.common.collect.ImmutableList;
-import com.linkedin.coral.common.functions.FunctionReturnTypes;
 import com.linkedin.coral.common.functions.GenericProjectFunction;
 import com.linkedin.coral.trino.rel2trino.functions.GenericProjectToTrinoConverter;
 
@@ -192,13 +191,6 @@ public class Calcite2TrinoUDFConverter {
         }
       }
 
-      if (operatorName.equalsIgnoreCase("from_unixtime")) {
-        Optional<RexNode> modifiedCall = visitFromUnixtime(call);
-        if (modifiedCall.isPresent()) {
-          return modifiedCall.get();
-        }
-      }
-
       if (operatorName.equalsIgnoreCase("cast")) {
         Optional<RexNode> modifiedCall = visitCast(call);
         if (modifiedCall.isPresent()) {
@@ -246,21 +238,6 @@ public class Calcite2TrinoUDFConverter {
         }
       }
       return Optional.of(rexBuilder.makeCall(op, castOperands));
-    }
-
-    private Optional<RexNode> visitFromUnixtime(RexCall call) {
-      List<RexNode> convertedOperands = visitList(call.getOperands(), (boolean[]) null);
-      SqlOperator formatDatetime = createSqlOperatorOfFunction("format_datetime", FunctionReturnTypes.STRING);
-      SqlOperator fromUnixtime = createSqlOperatorOfFunction("from_unixtime", explicit(TIMESTAMP));
-      if (convertedOperands.size() == 1) {
-        return Optional
-            .of(rexBuilder.makeCall(formatDatetime, rexBuilder.makeCall(fromUnixtime, call.getOperands().get(0)),
-                rexBuilder.makeLiteral("yyyy-MM-dd HH:mm:ss")));
-      } else if (convertedOperands.size() == 2) {
-        return Optional.of(rexBuilder.makeCall(formatDatetime,
-            rexBuilder.makeCall(fromUnixtime, call.getOperands().get(0)), call.getOperands().get(1)));
-      }
-      return Optional.empty();
     }
 
     private Optional<RexNode> visitFromUtcTimestampCall(RexCall call) {

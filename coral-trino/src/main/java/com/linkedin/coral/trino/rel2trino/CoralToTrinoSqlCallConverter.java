@@ -24,6 +24,7 @@ import com.linkedin.coral.hive.hive2rel.functions.StaticHiveFunctionRegistry;
 import com.linkedin.coral.trino.rel2trino.functions.TrinoElementAtFunction;
 import com.linkedin.coral.trino.rel2trino.transformers.CollectListOrSetFunctionTransformer;
 import com.linkedin.coral.trino.rel2trino.transformers.CoralRegistryOperatorRenameSqlCallTransformer;
+import com.linkedin.coral.trino.rel2trino.transformers.FromUnixtimeTransformer;
 import com.linkedin.coral.trino.rel2trino.transformers.GenericCoralRegistryOperatorRenameSqlCallTransformer;
 import com.linkedin.coral.trino.rel2trino.transformers.MapValueConstructorTransformer;
 import com.linkedin.coral.trino.rel2trino.transformers.ToDateOperatorTransformer;
@@ -94,6 +95,7 @@ public class CoralToTrinoSqlCallConverter extends SqlShuttle {
             "[{\"value\": 'day'}, {\"op\": \"date\", \"operands\":[{\"op\": \"timestamp\", \"operands\":[{\"input\": 2}]}]}, "
                 + "{\"op\": \"date\", \"operands\":[{\"op\": \"timestamp\", \"operands\":[{\"input\": 1}]}]}]",
             null, null),
+        new FromUnixtimeTransformer(),
         new ToDateOperatorTransformer(configs.getOrDefault(AVOID_TRANSFORM_TO_DATE_UDF, false)),
 
         // LinkedIn specific functions
@@ -121,7 +123,6 @@ public class CoralToTrinoSqlCallConverter extends SqlShuttle {
 
   @Override
   public SqlNode visit(SqlCall call) {
-    SqlCall transformedCall = sqlCallTransformers.apply(call);
-    return super.visit(transformedCall);
+    return sqlCallTransformers.apply((SqlCall) super.visit(call));
   }
 }
