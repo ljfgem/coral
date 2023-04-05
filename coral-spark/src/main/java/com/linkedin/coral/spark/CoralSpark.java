@@ -113,8 +113,8 @@ public class CoralSpark {
       Set<SparkUDFInfo> sparkUDFInfos) {
     CoralRelToSqlNodeConverter rel2sql = new CoralRelToSqlNodeConverter();
     SqlNode coralSqlNode = rel2sql.convert(sparkRelNode);
-    SqlNode sparkSqlNode = coralSqlNode.accept(new CoralSqlNodeToSparkSqlNodeConverter())
-        .accept(new CoralToSparkSqlCallConverter(hiveMetastoreClient, sparkUDFInfos));
+    SqlNode sparkSqlNode = coralSqlNode.accept(new CoralToSparkSqlCallConverter(hiveMetastoreClient, sparkUDFInfos))
+        .accept(new CoralSqlNodeToSparkSqlNodeConverter());
     SqlNode rewrittenSparkSqlNode = sparkSqlNode.accept(new SparkSqlRewriter());
     return rewrittenSparkSqlNode.toSqlString(SparkSqlDialect.INSTANCE).getSql();
   }
@@ -124,8 +124,8 @@ public class CoralSpark {
     CoralRelToSqlNodeConverter rel2sql = new CoralRelToSqlNodeConverter();
     // Create temporary objects r and rewritten to make debugging easier
     SqlNode coralSqlNode = rel2sql.convert(sparkRelNode);
-    SqlNode sparkSqlNode = coralSqlNode.accept(new CoralSqlNodeToSparkSqlNodeConverter())
-        .accept(new CoralToSparkSqlCallConverter(hiveMetastoreClient, sparkUDFInfos));
+    SqlNode sparkSqlNode = coralSqlNode.accept(new CoralToSparkSqlCallConverter(hiveMetastoreClient, sparkUDFInfos))
+        .accept(new CoralSqlNodeToSparkSqlNodeConverter());
 
     SqlNode rewritten = sparkSqlNode.accept(new SparkSqlRewriter());
     // Use a second pass visit to add explicit alias names,

@@ -853,6 +853,14 @@ public class CoralSparkTest {
     assertEquals(CoralSpark.create(TestUtils.getHiveMetastoreClient(), relNode).getSparkSql(), targetSql);
   }
 
+  @Test(enabled = false)
+  public void testLateralViewWithTypeDerivation() {
+    RelNode relNode = TestUtils.toRelNode("SELECT t.ccol[0] FROM complex LATERAL VIEW explode(complex.aa) t as ccol");
+    String targetSql =
+        "SELECT complex.a, t0.ccol\n" + "FROM default.complex complex LATERAL VIEW EXPLODE(complex.c) t0 AS ccol";
+    assertEquals(CoralSpark.create(TestUtils.getHiveMetastoreClient(), relNode).getSparkSql(), targetSql);
+  }
+
   private static String getCoralSparkTranslatedSqlWithAliasFromCoralSchema(String source) {
     RelNode relNode = TestUtils.toRelNode(source);
     Schema schema = TestUtils.getAvroSchemaForView(source, false);

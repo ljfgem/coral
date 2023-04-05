@@ -58,7 +58,7 @@ public class TestUtils {
     run(driver, "CREATE TABLE IF NOT EXISTS foo(a int, b varchar(30), c double)");
     run(driver, "CREATE TABLE IF NOT EXISTS bar(x int, y double)");
     run(driver,
-        "CREATE TABLE IF NOT EXISTS complex(a int, b string, c array<double>, s struct<name:string, age:int>, m map<string, int>, sarr array<struct<name:string, age:int>>)");
+        "CREATE TABLE IF NOT EXISTS complex(a int, b string, c array<double>, s struct<name:string, age:int>, m map<string, int>, sarr array<struct<name:string, age:int>>, aa array<array<double>>)");
 
     String baseComplexSchema = loadSchema("base-complex.avsc");
     executeCreateTableQuery(driver, "default", "basecomplex", baseComplexSchema);
