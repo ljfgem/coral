@@ -73,9 +73,18 @@ public class HiveToRelConverter extends ToRelConverter {
     return sqlValidator;
   }
 
+  /**
+   * It is important to place {@link DaliOperatorTable} before {@link SqlStdOperatorTable} as we need to override
+   * some operators in {@link SqlStdOperatorTable}.
+   *
+   * For instance, {@link SqlStdOperatorTable#DIVIDE} returns the data type {@link org.apache.calcite.sql.type.ReturnTypes#QUOTIENT_NULLABLE},
+   * which is not compatible with the expected data type {@link org.apache.calcite.sql.type.ReturnTypes#DOUBLE} in Hive/Spark.
+   * Therefore, we override it in {@link StaticHiveFunctionRegistry} and place {@link DaliOperatorTable} before {@link SqlStdOperatorTable} to
+   * ensure that Calcite uses the overridden operator.
+   */
   @Override
   protected SqlOperatorTable getOperatorTable() {
-    return ChainedSqlOperatorTable.of(SqlStdOperatorTable.instance(), new DaliOperatorTable(functionResolver));
+    return ChainedSqlOperatorTable.of(new DaliOperatorTable(functionResolver), SqlStdOperatorTable.instance());
   }
 
   @Override

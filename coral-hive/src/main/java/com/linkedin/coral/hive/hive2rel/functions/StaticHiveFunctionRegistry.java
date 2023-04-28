@@ -17,8 +17,10 @@ import com.google.common.base.Preconditions;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.SqlBinaryOperator;
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperandCountRange;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -106,6 +108,12 @@ public class StaticHiveFunctionRegistry implements FunctionRegistry {
     addFunctionEntry("regexp", HiveRLikeOperator.REGEXP);
     addFunctionEntry("!=", NOT_EQUALS);
     addFunctionEntry("==", EQUALS);
+    // By default, Calcite's "/" operator returns data type `ReturnTypes#QUOTIENT_NULLABLE`,
+    // which is incompatible with the expected data type `ReturnTypes#DOUBLE` in Hive/Spark.
+    // To resolve this, we need to override the return type to `ReturnTypes#DOUBLE` while
+    // keeping the other parameters the same.
+    addFunctionEntry("/", new SqlBinaryOperator("/", SqlKind.DIVIDE, 60, true, ReturnTypes.DOUBLE,
+        InferTypes.FIRST_KNOWN, OperandTypes.DIVISION_OPERATOR));
 
     // conditional function
     addFunctionEntry("tok_isnull", IS_NULL);
