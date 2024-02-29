@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 LinkedIn Corporation. All rights reserved.
+ * Copyright 2023-2024 LinkedIn Corporation. All rights reserved.
  * Licensed under the BSD-2 Clause license.
  * See LICENSE in the project root for license information.
  */
@@ -59,7 +59,8 @@ public class TypeDerivationUtil {
       throw new RuntimeException("SqlValidator does not exist to derive the RelDataType for SqlNode: " + sqlNode);
     }
 
-    for (SqlSelect topSqlSelectNode : topSelectNodes) {
+    for (int i = topSelectNodes.size() - 1; i >= 0; --i) {
+      final SqlSelect topSqlSelectNode = topSelectNodes.get(i);
       final SqlSelect dummySqlSelect = new SqlSelect(topSqlSelectNode.getParserPosition(), null,
           SqlNodeList.of(sqlNode), topSqlSelectNode.getFrom(), topSqlSelectNode.getWhere(), topSqlSelectNode.getGroup(),
           topSqlSelectNode.getHaving(), topSqlSelectNode.getWindowList(), topSqlSelectNode.getOrderList(),
