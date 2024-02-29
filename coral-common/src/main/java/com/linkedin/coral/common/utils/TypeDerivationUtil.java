@@ -25,7 +25,6 @@ import org.apache.calcite.sql.validate.SqlValidator;
  */
 public class TypeDerivationUtil {
   private final SqlValidator sqlValidator;
-  private final List<SqlSelect> topSelectNodes = new ArrayList<>();
 
   public TypeDerivationUtil(SqlValidator sqlValidator, SqlNode topSqlNode) {
     this.sqlValidator = sqlValidator;
@@ -54,7 +53,7 @@ public class TypeDerivationUtil {
    * @return The RelDataType derived for the given SqlNode.
    * @throws RuntimeException if the RelDataType cannot be derived for the given SqlNode.
    */
-  public RelDataType getRelDataType(SqlNode sqlNode) {
+  public RelDataType getRelDataType(SqlNode sqlNode, List<SqlSelect> topSelectNodes) {
     if (sqlValidator == null) {
       throw new RuntimeException("SqlValidator does not exist to derive the RelDataType for SqlNode: " + sqlNode);
     }
@@ -106,7 +105,6 @@ public class TypeDerivationUtil {
           SqlNode star = SqlIdentifier.star(names, SqlParserPos.ZERO, sqlParserPos);
           ((SqlSelect) sqlCall).setSelectList(SqlNodeList.of(star));
         }
-        topSelectNodes.add((SqlSelect) sqlCall);
       }
       return super.visit(sqlCall);
     }

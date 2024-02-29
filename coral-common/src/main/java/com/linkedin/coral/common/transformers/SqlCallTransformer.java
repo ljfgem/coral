@@ -1,10 +1,11 @@
 /**
- * Copyright 2017-2023 LinkedIn Corporation. All rights reserved.
+ * Copyright 2017-2024 LinkedIn Corporation. All rights reserved.
  * Licensed under the BSD-2 Clause license.
  * See LICENSE in the project root for license information.
  */
 package com.linkedin.coral.common.transformers;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
@@ -14,6 +15,7 @@ import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.validate.SqlUserDefinedFunction;
@@ -26,6 +28,7 @@ import com.linkedin.coral.common.utils.TypeDerivationUtil;
  */
 public abstract class SqlCallTransformer {
   private TypeDerivationUtil typeDerivationUtil;
+  private final List<SqlSelect> topSelectNodes = new ArrayList<>();
 
   public SqlCallTransformer() {
   }
@@ -49,6 +52,9 @@ public abstract class SqlCallTransformer {
    * otherwise returns the input SqlCall without any transformation
    */
   public SqlCall apply(SqlCall sqlCall) {
+    if (sqlCall instanceof SqlSelect) {
+      topSelectNodes.add((SqlSelect) sqlCall);
+    }
     if (condition(sqlCall)) {
       return transform(sqlCall);
     } else {
@@ -65,7 +71,7 @@ public abstract class SqlCallTransformer {
     if (typeDerivationUtil == null) {
       throw new RuntimeException("TypeDerivationUtil does not exist to derive the RelDataType for SqlNode: " + sqlNode);
     }
-    return typeDerivationUtil.getRelDataType(sqlNode);
+    return typeDerivationUtil.getRelDataType(sqlNode, topSelectNodes);
   }
 
   protected RelDataType leastRestrictive(List<RelDataType> types) {
