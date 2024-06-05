@@ -1,5 +1,5 @@
 /**
- * Copyright 2017-2023 LinkedIn Corporation. All rights reserved.
+ * Copyright 2017-2024 LinkedIn Corporation. All rights reserved.
  * Licensed under the BSD-2 Clause license.
  * See LICENSE in the project root for license information.
  */
@@ -353,6 +353,15 @@ public class HiveToRelConverterTest {
     RelNode rel = converter.convertView("test", "tableOneView");
     String expectedPlan = "LogicalProject(EXPR$0=[com.linkedin.coral.hive.hive2rel.CoralTestUDF($0)])\n"
         + "  LogicalTableScan(table=[[hive, test, tableone]])\n";
+    assertEquals(RelOptUtil.toString(rel), expectedPlan);
+  }
+
+  @Test
+  public void testUDFWithShadedClassName() {
+    RelNode rel = converter.convertView("test", "tableOneViewShadePrefixUDF");
+    String expectedPlan =
+        "LogicalProject(EXPR$0=[coralversionedudf_0_1_x.com.linkedin.coral.hive.hive2rel.CoralTestUDF($0)])\n"
+            + "  LogicalTableScan(table=[[hive, test, tableone]])\n";
     assertEquals(RelOptUtil.toString(rel), expectedPlan);
   }
 
